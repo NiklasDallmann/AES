@@ -4,7 +4,7 @@ TARGET					= aes
 
 TEMPLATE				= lib
 CONFIG					+= staticlib
-DESTDIR					= $$PWD/../target/lib
+DESTDIR					= $$PWD/../../target/lib
 
 SOURCES					+= \
 
