@@ -10,4 +10,4 @@ SOURCES					+= \
 
 HEADERS					+= \
 
-include($$PWD/../base_configuration.pri)
+include($$PWD/../../base_configuration.pri)
