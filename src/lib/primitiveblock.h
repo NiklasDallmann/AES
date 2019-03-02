@@ -50,7 +50,18 @@ private:
 	void _inverseMixCollumns();
 	void _shiftRows();
 	void _inverseShiftRows();
-	void _subBytes();
+	
+	void _subBytes()
+	{
+		for (uint8_t x = 0; x < AES_BLOCK_SIZE; x++)
+		{
+			for (uint8_t y = 0; y < KeySizeType<keySize>::value; y++)
+			{
+				this->_state[x][y] = _sBoxLut[this->_state[x][y]];
+			}
+		}
+	}
+	
 	void _inverseSubBytes();
 	
 	void _subWord();
