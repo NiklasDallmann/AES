@@ -33,6 +33,42 @@ struct KeySizeType<AES_256_KEY_SIZE>
 };
 
 template <uint8_t keySize>
+void circularShiftRow(uint8_t *row, uint8_t byteCount);
+
+template <>
+void circularShiftRow<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+{
+	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
+	uint64_t tmp = currentRow[0];
+	
+	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+}
+
+template <>
+void circularShiftRow<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+{
+	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
+	uint64_t tmp = currentRow[0];
+	
+	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[2] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[2] = (currentRow[2] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+}
+
+template <>
+void circularShiftRow<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+{
+	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
+	uint64_t tmp = currentRow[0];
+	
+	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[2] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[2] = (currentRow[2] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[3] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[3] = (currentRow[3] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+}
+
+template <uint8_t keySize>
 class PrimitiveBlock
 {
 public:
@@ -42,22 +78,32 @@ public:
 private:
 	static const uint8_t _sBoxLut[];
 	
-	uint8_t _state[AES_BLOCK_SIZE][KeySizeType<keySize>::value];
+	static constexpr uint8_t _rowCount = AES_BLOCK_SIZE;
+	static constexpr uint8_t _columnCount = KeySizeType<keySize>::value;
+	uint8_t _state[_rowCount][_columnCount];
 	
 	void _addRoundKey();
 	
 	void _mixCollumns();
 	void _inverseMixCollumns();
-	void _shiftRows();
+	
+	void _shiftRows()
+	{
+		circularShiftRow<keySize>(this->_state[1], 1);
+		circularShiftRow<keySize>(this->_state[2], 2);
+		circularShiftRow<keySize>(this->_state[3], 3);
+	}
+	
 	void _inverseShiftRows();
 	
 	void _subBytes()
 	{
-		for (uint8_t x = 0; x < AES_BLOCK_SIZE; x++)
+		// Set each element of the state to the value of the corresponding SBox LUT element
+		for (uint8_t row = 0; row < _rowCount; row++)
 		{
-			for (uint8_t y = 0; y < KeySizeType<keySize>::value; y++)
+			for (uint8_t column = 0; column < _columnCount; column++)
 			{
-				this->_state[x][y] = _sBoxLut[this->_state[x][y]];
+				this->_state[row][column] = _sBoxLut[this->_state[row][column]];
 			}
 		}
 	}
