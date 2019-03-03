@@ -84,7 +84,24 @@ private:
 	
 	void _addRoundKey();
 	
-	void _mixCollumns();
+	void _mixCollumns()
+	{
+		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
+		
+		for (uint8_t column = 0; column < _columnCount; column++)
+		{
+			word[0] = this->_state[0][column];
+			word[1] = this->_state[1][column];
+			word[2] = this->_state[2][column];
+			word[3] = this->_state[3][column];
+			
+			this->_state[0][column] = (0x02 * word[0]) ^ (0x03 * word[1]) ^ word[2] ^ word[3];
+			this->_state[1][column] = word[0] ^ (0x02 * word[1]) ^ (0x03 * word[2]) ^ word[3];
+			this->_state[2][column] = word[0] ^ word[1] ^ (0x02 * word[2]) ^ (0x03 * word[3]);
+			this->_state[3][column] = (0x03 * word[0]) ^ word[1] ^ word[2] ^ (0x02 * word[3]);
+		}
+	}
+	
 	void _inverseMixCollumns();
 	
 	void _shiftRows()
