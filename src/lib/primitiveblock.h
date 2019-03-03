@@ -10,6 +10,9 @@
 #define AES_256_ROUND_COUNT		14
 
 #include <stdint.h>
+#include <string.h>
+
+#include "utilities.h"
 
 namespace Aes
 {
@@ -44,11 +47,11 @@ void circularShiftRowLeft(uint8_t *row, uint8_t byteCount);
 template <>
 void circularShiftRowLeft<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
-	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
-	uint64_t tmp = currentRow[0];
+	uint32_t *currentRow = reinterpret_cast<uint32_t *>(row);
+	uint32_t tmp = currentRow[0];
 	
-	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	currentRow[0] = __builtin_bswap32((__builtin_bswap32(currentRow[0]) << (byteCount * sizeof (uint8_t) * 8)) | (__builtin_bswap32(currentRow[1]) >> ((sizeof (uint32_t) - byteCount * sizeof (uint8_t)) * 8)));
+	currentRow[1] = (__builtin_bswap32(currentRow[1]) << (byteCount * sizeof (uint8_t) * 8)) | (__builtin_bswap32(tmp) >> ((sizeof (uint32_t) - byteCount * sizeof (uint8_t)) * 8));
 }
 
 template <>
@@ -78,11 +81,74 @@ template <uint8_t keySize>
 class PrimitiveBlock
 {
 public:
-	void encrypt(const uint8_t *key, const uint8_t *inputBlock, uint8_t *outputBlock);
-	void decrypt(const uint8_t *key, const uint8_t *inputBlock, uint8_t *outputBlock);
+	PrimitiveBlock(const uint8_t *key)
+	{
+		this->_expandKey(key);
+		
+		printBuffer(&this->_expandedKey[0], 4 * 11);
+	}
+	
+	~PrimitiveBlock()
+	{
+//		memset_s()()
+	}
+	
+	void encrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
+	{
+		// Copy input data into state
+		for (uint8_t column = 0; column < _columnCount; column++)
+		{
+			for (uint8_t row = 0; row < _rowCount; row++)
+			{
+				this->_state[row][column] = *inputBlock;
+				inputBlock++;
+			}
+		}
+		
+		printState(&this->_state[0][0], KeySizeType<keySize>::value);
+		
+		this->_addRoundKey(0);
+		
+		printState(&this->_state[0][0], KeySizeType<keySize>::value);
+		
+		for (uint8_t round = 1; round < _roundCount; round++)
+		{
+			this->_subBytes();
+			printState(&this->_state[0][0], KeySizeType<keySize>::value);
+			this->_shiftRows();
+			printState(&this->_state[0][0], KeySizeType<keySize>::value);
+			this->_mixCollumns();
+			printState(&this->_state[0][0], KeySizeType<keySize>::value);
+			this->_addRoundKey(round);
+			
+			printState(&this->_state[0][0], KeySizeType<keySize>::value);
+		}
+		
+		this->_subBytes();
+		this->_shiftRows();
+		this->_addRoundKey(_roundCount);
+		
+		printState(&this->_state[0][0], KeySizeType<keySize>::value);
+		
+		// Write state into output
+		for (uint8_t column = 0; column < _columnCount; column++)
+		{
+			for (uint8_t row = 0; row < _rowCount; row++)
+			{
+				*outputBlock = this->_state[row][column];
+				outputBlock++;
+			}
+		}
+	}
+	
+	void decrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
+	{
+		
+	}
 	
 private:
 	static const uint8_t _sBoxLut[];
+	static const uint8_t _rCon[];
 	
 	static constexpr uint8_t _rowCount = AES_BLOCK_SIZE;
 	static constexpr uint8_t _columnCount = KeySizeType<keySize>::value;
@@ -91,13 +157,13 @@ private:
 	
 	uint32_t _expandedKey[AES_BLOCK_SIZE * (_roundCount + 1)];
 	
-	void _expandKey(uint8_t *key)
+	void _expandKey(const uint8_t *key)
 	{
 		uint32_t tmp = 0;
 		
 		for (uint8_t column = 0; column < _columnCount; column++)
 		{
-			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]) << 8;
+			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]);
 		}
 		
 		for (uint8_t column = _columnCount; column < (_rowCount * (_roundCount + 1)); column++)
@@ -106,7 +172,7 @@ private:
 			
 			if ((column % _columnCount) == 0)
 			{
-				tmp = this->_subWord(this->_rotWord(tmp)) ^ (0x00800000 << (column / _columnCount));
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (_rCon[column / _columnCount] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
 			}
 			else if ((_columnCount > 6) & ((column % _columnCount) == 4))
 			{
@@ -117,9 +183,41 @@ private:
 		}
 	}
 	
-	void _addRoundKey()
+	void _addRoundKey(const uint8_t round)
 	{
-		
+		for (uint8_t column = 0; column < _columnCount; column++)
+		{
+			uint32_t word = 0;
+#ifdef LITTLE_ENDIAN
+			// Gather bytes in column
+			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[0][column];
+			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[1][column];
+			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[2][column];
+			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[3][column];
+			
+			word ^= this->_expandedKey[round * _rowCount + column];
+			
+			// Write back word
+			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[3];
+			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[2];
+			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[1];
+			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[0];
+#else
+			// Gather bytes in column
+			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
+			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[1][column];
+			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[2][column];
+			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[3][column];
+			
+			word ^= this->_expandedKey[round * _rowCount + column];
+			
+			// Write back word
+			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[0];
+			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[1];
+			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[2];
+			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[3];
+#endif
+		}
 	}
 	
 	void _mixCollumns()
@@ -169,10 +267,17 @@ private:
 	{
 		uint32_t returnValue = 0;
 		
+#ifdef LITTLE_ENDIAN
+		reinterpret_cast<uint8_t *>(&returnValue)[3] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[0]];
+		reinterpret_cast<uint8_t *>(&returnValue)[2] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[1]];
+		reinterpret_cast<uint8_t *>(&returnValue)[1] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[2]];
+		reinterpret_cast<uint8_t *>(&returnValue)[0] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[3]];
+#else
 		reinterpret_cast<uint8_t *>(&returnValue)[0] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[0]];
 		reinterpret_cast<uint8_t *>(&returnValue)[1] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[1]];
 		reinterpret_cast<uint8_t *>(&returnValue)[2] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[2]];
 		reinterpret_cast<uint8_t *>(&returnValue)[3] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[3]];
+#endif
 		
 		return returnValue;
 	}
@@ -201,6 +306,11 @@ const uint8_t PrimitiveBlock<keySize>::_sBoxLut[] = {
     0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
+};
+
+template <uint8_t keySize>
+const uint8_t PrimitiveBlock<keySize>::_rCon[] = {
+	0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36
 };
 
 } // namespace Aes

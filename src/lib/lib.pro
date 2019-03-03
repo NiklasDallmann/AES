@@ -10,6 +10,7 @@ SOURCES					+= \
     primitiveblock.cpp
 
 HEADERS					+= \
-    primitiveblock.h
+    primitiveblock.h \
+    utilities.h
 
 include($$PWD/../../base_configuration.pri)
