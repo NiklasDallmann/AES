@@ -5,6 +5,9 @@
 #define AES_128_KEY_SIZE		4
 #define AES_192_KEY_SIZE		6
 #define AES_256_KEY_SIZE		8
+#define AES_128_ROUND_COUNT		10
+#define AES_192_ROUND_COUNT		12
+#define AES_256_ROUND_COUNT		14
 
 #include <stdint.h>
 
@@ -18,25 +21,28 @@ template <>
 struct KeySizeType<AES_128_KEY_SIZE>
 {
 	static constexpr uint8_t value = AES_128_KEY_SIZE;
+	static constexpr uint8_t rounds = AES_128_ROUND_COUNT;
 };
 
 template <>
 struct KeySizeType<AES_192_KEY_SIZE>
 {
 	static constexpr uint8_t value = AES_192_KEY_SIZE;
+	static constexpr uint8_t rounds = AES_192_ROUND_COUNT;
 };
 
 template <>
 struct KeySizeType<AES_256_KEY_SIZE>
 {
 	static constexpr uint8_t value = AES_256_KEY_SIZE;
+	static constexpr uint8_t rounds = AES_256_ROUND_COUNT;
 };
 
 template <uint8_t keySize>
-void circularShiftRow(uint8_t *row, uint8_t byteCount);
+void circularShiftRowLeft(uint8_t *row, uint8_t byteCount);
 
 template <>
-void circularShiftRow<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+void circularShiftRowLeft<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
 	uint64_t tmp = currentRow[0];
@@ -46,7 +52,7 @@ void circularShiftRow<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 }
 
 template <>
-void circularShiftRow<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+void circularShiftRowLeft<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
 	uint64_t tmp = currentRow[0];
@@ -57,7 +63,7 @@ void circularShiftRow<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 }
 
 template <>
-void circularShiftRow<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
+void circularShiftRowLeft<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
 	uint64_t tmp = currentRow[0];
@@ -80,9 +86,41 @@ private:
 	
 	static constexpr uint8_t _rowCount = AES_BLOCK_SIZE;
 	static constexpr uint8_t _columnCount = KeySizeType<keySize>::value;
+	static constexpr uint8_t _roundCount = KeySizeType<keySize>::rounds;
 	uint8_t _state[_rowCount][_columnCount];
 	
-	void _addRoundKey();
+	uint32_t _expandedKey[AES_BLOCK_SIZE * (_roundCount + 1)];
+	
+	void _expandKey(uint8_t *key)
+	{
+		uint32_t tmp = 0;
+		
+		for (uint8_t column = 0; column < _columnCount; column++)
+		{
+			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]) << 8;
+		}
+		
+		for (uint8_t column = _columnCount; column < (_rowCount * (_roundCount + 1)); column++)
+		{
+			tmp = _expandedKey[column - 1];
+			
+			if ((column % _columnCount) == 0)
+			{
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (0x00800000 << (column / _columnCount));
+			}
+			else if ((_columnCount > 6) & ((column % _columnCount) == 4))
+			{
+				tmp = this->_subWord(tmp);
+			}
+			
+			this->_expandedKey[column] = this->_expandedKey[column - _columnCount] ^ tmp;
+		}
+	}
+	
+	void _addRoundKey()
+	{
+		
+	}
 	
 	void _mixCollumns()
 	{
@@ -106,9 +144,9 @@ private:
 	
 	void _shiftRows()
 	{
-		circularShiftRow<keySize>(this->_state[1], 1);
-		circularShiftRow<keySize>(this->_state[2], 2);
-		circularShiftRow<keySize>(this->_state[3], 3);
+		circularShiftRowLeft<keySize>(this->_state[1], 1);
+		circularShiftRowLeft<keySize>(this->_state[2], 2);
+		circularShiftRowLeft<keySize>(this->_state[3], 3);
 	}
 	
 	void _inverseShiftRows();
@@ -127,8 +165,22 @@ private:
 	
 	void _inverseSubBytes();
 	
-	void _subWord();
-	void _rotWord();
+	uint32_t _subWord(const uint32_t word)
+	{
+		uint32_t returnValue = 0;
+		
+		reinterpret_cast<uint8_t *>(&returnValue)[0] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[0]];
+		reinterpret_cast<uint8_t *>(&returnValue)[1] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[1]];
+		reinterpret_cast<uint8_t *>(&returnValue)[2] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[2]];
+		reinterpret_cast<uint8_t *>(&returnValue)[3] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[3]];
+		
+		return returnValue;
+	}
+	
+	uint32_t _rotWord(const uint32_t word)
+	{
+		return ((word << 8) | (word >> ((sizeof (uint32_t) * 8) - 8)));
+	}
 };
 
 template <uint8_t keySize>
