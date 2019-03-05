@@ -1,3 +1,6 @@
+#ifndef UTILITIES_H
+#define UTILITIES_H
+
 #include <iostream>
 #include <stdint.h>
 
@@ -5,7 +8,7 @@
 #define LITTLE_ENDIAN
 #endif
 
-static void printBuffer(const uint8_t *buffer, size_t size)
+static inline void printBuffer(const uint8_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
@@ -15,7 +18,7 @@ static void printBuffer(const uint8_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-static void printBuffer(const uint32_t *buffer, size_t size)
+static inline void printBuffer(const uint32_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
@@ -25,7 +28,7 @@ static void printBuffer(const uint32_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-static void printState(const uint8_t *state, size_t keySize)
+static inline void printState(const uint8_t *state, size_t keySize)
 {
 	for (uint8_t i = 0; i < 4; i++)
 	{
@@ -39,3 +42,5 @@ static void printState(const uint8_t *state, size_t keySize)
 //{
 //	uint64_t returnValue = dword <<
 //}
+
+#endif // UTILITIES_H

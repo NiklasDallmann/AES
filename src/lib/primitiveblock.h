@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <type_traits>
 
 #include "utilities.h"
 
@@ -41,6 +42,22 @@ struct KeySizeType<AES_256_KEY_SIZE>
 	static constexpr uint8_t rounds = AES_256_ROUND_COUNT;
 };
 
+template <typename T>
+T rotateLeft(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value << bitCount | value >> (((sizeof (T) * 8)) - bitCount));
+}
+
+template <typename T>
+T rotateRight(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value >> bitCount | value << (((sizeof (T) * 8)) - bitCount));
+}
+
 template <uint8_t keySize>
 void circularShiftRowLeft(uint8_t *row, uint8_t byteCount);
 
@@ -48,33 +65,50 @@ template <>
 void circularShiftRowLeft<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint32_t *currentRow = reinterpret_cast<uint32_t *>(row);
-	uint32_t tmp = currentRow[0];
 	
-	currentRow[0] = __builtin_bswap32((__builtin_bswap32(currentRow[0]) << (byteCount * sizeof (uint8_t) * 8)) | (__builtin_bswap32(currentRow[1]) >> ((sizeof (uint32_t) - byteCount * sizeof (uint8_t)) * 8)));
-	currentRow[1] = (__builtin_bswap32(currentRow[1]) << (byteCount * sizeof (uint8_t) * 8)) | (__builtin_bswap32(tmp) >> ((sizeof (uint32_t) - byteCount * sizeof (uint8_t)) * 8));
+#ifdef LITTLE_ENDIAN
+	currentRow[0] = __builtin_bswap32(rotateLeft(__builtin_bswap32(currentRow[0]), byteCount * 8));
+#else
+	currentRow[0] = rotateLeft(currentRow[0], byteCount * 8);
+#endif
 }
 
 template <>
 void circularShiftRowLeft<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
-	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
-	uint64_t tmp = currentRow[0];
+	uint32_t *currentRow = reinterpret_cast<uint32_t *>(row);
 	
-	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[2] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[2] = (currentRow[2] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+	// Load first four bytes
+	uint64_t tmp = currentRow[0] << (sizeof (uint16_t) * 8);
+	
+	// Load the last two bytes and extend them to four
+	uint64_t thirdHalf = uint64_t(*reinterpret_cast<uint16_t *>(row + sizeof (uint16_t)));
+	
+	tmp |= thirdHalf;
+	
+#ifdef LITTLE_ENDIAN
+	tmp = __builtin_bswap64(rotateLeft(__builtin_bswap64(tmp), byteCount * 8));
+#else
+	tmp = rotateLeft(tmp, byteCount * 8);
+#endif
+	
+	// Write back last two bytes
+	thirdHalf = uint16_t(tmp);
+	
+	// Write back first four bytes
+	currentRow[0] = uint32_t(tmp >> (sizeof (uint16_t) * 8));
 }
 
 template <>
 void circularShiftRowLeft<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
-	uint64_t tmp = currentRow[0];
 	
-	currentRow[0] = (currentRow[0] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[1] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[1] = (currentRow[1] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[2] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[2] = (currentRow[2] << (byteCount * sizeof (uint8_t) * 8)) | (currentRow[3] >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
-	currentRow[3] = (currentRow[3] << (byteCount * sizeof (uint8_t) * 8)) | (tmp >> ((sizeof (uint64_t) - byteCount * sizeof (uint8_t)) * 8));
+#ifdef LITTLE_ENDIAN
+	currentRow[0] = __builtin_bswap64(rotateLeft(__builtin_bswap64(currentRow[0]), byteCount * 8));
+#else
+	currentRow[0] = rotateLeft(currentRow[0], byteCount * 8);
+#endif
 }
 
 template <uint8_t keySize>
@@ -84,8 +118,6 @@ public:
 	PrimitiveBlock(const uint8_t *key)
 	{
 		this->_expandKey(key);
-		
-		printBuffer(&this->_expandedKey[0], 4 * 11);
 	}
 	
 	~PrimitiveBlock()
@@ -105,30 +137,19 @@ public:
 			}
 		}
 		
-		printState(&this->_state[0][0], KeySizeType<keySize>::value);
-		
 		this->_addRoundKey(0);
-		
-		printState(&this->_state[0][0], KeySizeType<keySize>::value);
 		
 		for (uint8_t round = 1; round < _roundCount; round++)
 		{
 			this->_subBytes();
-			printState(&this->_state[0][0], KeySizeType<keySize>::value);
 			this->_shiftRows();
-			printState(&this->_state[0][0], KeySizeType<keySize>::value);
 			this->_mixCollumns();
-			printState(&this->_state[0][0], KeySizeType<keySize>::value);
 			this->_addRoundKey(round);
-			
-			printState(&this->_state[0][0], KeySizeType<keySize>::value);
 		}
 		
 		this->_subBytes();
 		this->_shiftRows();
 		this->_addRoundKey(_roundCount);
-		
-		printState(&this->_state[0][0], KeySizeType<keySize>::value);
 		
 		// Write state into output
 		for (uint8_t column = 0; column < _columnCount; column++)
@@ -139,6 +160,8 @@ public:
 				outputBlock++;
 			}
 		}
+		
+		printState(&this->_state[0][0], KeySizeType<keySize>::value);
 	}
 	
 	void decrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
@@ -190,18 +213,22 @@ private:
 			uint32_t word = 0;
 #ifdef LITTLE_ENDIAN
 			// Gather bytes in column
-			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[0][column];
-			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[1][column];
-			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[2][column];
-			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[3][column];
+			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
+			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[1][column];
+			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[2][column];
+			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[3][column];
+			
+			word = __builtin_bswap32(word);
 			
 			word ^= this->_expandedKey[round * _rowCount + column];
 			
+			word = __builtin_bswap32(word);
+			
 			// Write back word
-			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[3];
-			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[2];
-			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[1];
-			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[0];
+			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[0];
+			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[1];
+			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[2];
+			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[3];
 #else
 			// Gather bytes in column
 			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
@@ -220,6 +247,13 @@ private:
 		}
 	}
 	
+	constexpr uint8_t _xtime(const uint8_t value) const
+	{
+		// First left shift by one bit to achieve a multiplication by 2. Then XOR conditionally with 0x1b. That is achieved by shifting the MSB to the LSB and
+		// AND with 1. Then multiply that by 0x1b.
+		return uint8_t((value << uint8_t(1)) ^ ((value >> uint8_t(7) & uint8_t(1)) * uint8_t(0x1b)));
+	}
+	
 	void _mixCollumns()
 	{
 		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
@@ -231,10 +265,10 @@ private:
 			word[2] = this->_state[2][column];
 			word[3] = this->_state[3][column];
 			
-			this->_state[0][column] = (0x02 * word[0]) ^ (0x03 * word[1]) ^ word[2] ^ word[3];
-			this->_state[1][column] = word[0] ^ (0x02 * word[1]) ^ (0x03 * word[2]) ^ word[3];
-			this->_state[2][column] = word[0] ^ word[1] ^ (0x02 * word[2]) ^ (0x03 * word[3]);
-			this->_state[3][column] = (0x03 * word[0]) ^ word[1] ^ word[2] ^ (0x02 * word[3]);
+			this->_state[0][column] = _xtime(word[0]) ^ _xtime(word[1]) ^ word[1] ^ word[2] ^ word[3];
+			this->_state[1][column] = word[0] ^ _xtime(word[1]) ^ _xtime(word[2]) ^ word[2] ^ word[3];
+			this->_state[2][column] = word[0] ^ word[1] ^ _xtime(word[2]) ^ _xtime(word[3]) ^ word[3];
+			this->_state[3][column] = _xtime(word[0]) ^ word[0] ^ word[1] ^ word[2] ^ _xtime(word[3]);
 		}
 	}
 	
@@ -267,24 +301,17 @@ private:
 	{
 		uint32_t returnValue = 0;
 		
-#ifdef LITTLE_ENDIAN
-		reinterpret_cast<uint8_t *>(&returnValue)[3] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[0]];
-		reinterpret_cast<uint8_t *>(&returnValue)[2] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[1]];
-		reinterpret_cast<uint8_t *>(&returnValue)[1] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[2]];
-		reinterpret_cast<uint8_t *>(&returnValue)[0] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[3]];
-#else
 		reinterpret_cast<uint8_t *>(&returnValue)[0] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[0]];
 		reinterpret_cast<uint8_t *>(&returnValue)[1] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[1]];
 		reinterpret_cast<uint8_t *>(&returnValue)[2] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[2]];
 		reinterpret_cast<uint8_t *>(&returnValue)[3] = _sBoxLut[reinterpret_cast<const uint8_t *>(&word)[3]];
-#endif
 		
 		return returnValue;
 	}
 	
 	uint32_t _rotWord(const uint32_t word)
 	{
-		return ((word << 8) | (word >> ((sizeof (uint32_t) * 8) - 8)));
+		return rotateLeft(word, 8);
 	}
 };
 

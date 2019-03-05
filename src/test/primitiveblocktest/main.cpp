@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "primitiveblock.h"
+#include "utilities.h"
 
 int main()
 {
@@ -19,7 +20,7 @@ int main()
 	
 	block.encrypt(&input[0], &output[0]);
 	
-	
+	printBuffer(output, 16);
 	
 	return 0;
 }
