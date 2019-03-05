@@ -66,7 +66,7 @@ void circularShiftRowLeft<AES_128_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint32_t *currentRow = reinterpret_cast<uint32_t *>(row);
 	
-#ifdef LITTLE_ENDIAN
+#ifdef AES_LITTLE_ENDIAN
 	currentRow[0] = __builtin_bswap32(rotateLeft(__builtin_bswap32(currentRow[0]), byteCount * 8));
 #else
 	currentRow[0] = rotateLeft(currentRow[0], byteCount * 8);
@@ -86,7 +86,7 @@ void circularShiftRowLeft<AES_192_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 	
 	tmp |= thirdHalf;
 	
-#ifdef LITTLE_ENDIAN
+#ifdef AES_LITTLE_ENDIAN
 	tmp = __builtin_bswap64(rotateLeft(__builtin_bswap64(tmp), byteCount * 8));
 #else
 	tmp = rotateLeft(tmp, byteCount * 8);
@@ -104,7 +104,7 @@ void circularShiftRowLeft<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 {
 	uint64_t *currentRow = reinterpret_cast<uint64_t *>(row);
 	
-#ifdef LITTLE_ENDIAN
+#ifdef AES_LITTLE_ENDIAN
 	currentRow[0] = __builtin_bswap64(rotateLeft(__builtin_bswap64(currentRow[0]), byteCount * 8));
 #else
 	currentRow[0] = rotateLeft(currentRow[0], byteCount * 8);
@@ -211,7 +211,7 @@ private:
 		for (uint8_t column = 0; column < _columnCount; column++)
 		{
 			uint32_t word = 0;
-#ifdef LITTLE_ENDIAN
+#ifdef AES_LITTLE_ENDIAN
 			// Gather bytes in column
 			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
 			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[1][column];
