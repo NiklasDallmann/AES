@@ -115,14 +115,19 @@ template <uint8_t keySize>
 class PrimitiveBlock
 {
 public:
-	PrimitiveBlock(const uint8_t *key)
+	PrimitiveBlock(uint8_t *key)
 	{
 		this->_expandKey(key);
+		
+#ifdef AES_COMPILER_GCC
+		explicit_bzero(key, keySize * 8);
+#elif
+		static_assert (false, "Compiler not supported.");
+#endif
 	}
 	
 	~PrimitiveBlock()
 	{
-//		memset_s()()
 	}
 	
 	void encrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
