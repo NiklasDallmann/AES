@@ -120,7 +120,7 @@ public:
 		this->_expandKey(key);
 		
 #ifdef AES_COMPILER_GCC
-		explicit_bzero(key, keySize * 8);
+		explicit_bzero(key, keySize * sizeof (uint32_t));
 #elif
 		static_assert (false, "Compiler not supported.");
 #endif
@@ -128,6 +128,11 @@ public:
 	
 	~PrimitiveBlock()
 	{
+#ifdef AES_COMPILER_GCC
+		explicit_bzero(this->_state, this->_rowCount * this->_columnCount * sizeof (uint8_t));
+#elif
+		static_assert (false, "Compiler not supported.");
+#endif
 	}
 	
 	void encrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
