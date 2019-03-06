@@ -130,19 +130,27 @@ static inline void printBuffer(const uint32_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-static inline void printState(const uint8_t *state, size_t keySize)
+template <uint8_t keySize>
+static inline void printState(const uint8_t *state)
 {
-	for (uint8_t i = 0; i < 4; i++)
+	uint8_t stateData[4][keySize];
+	
+	// Transform state to row-major for simpler access
+	for (uint8_t row = 0; row < 4; row++)
 	{
-		printBuffer(state + i * keySize, keySize);
+		for (uint8_t column = 0; column < keySize; column++)
+		{
+			stateData[row][column] = state[column * keySize + row];
+		}
+	}
+	
+	// Print rows
+	for (uint8_t row = 0; row < 4; row++)
+	{
+		printBuffer(stateData[row], keySize);
 	}
 	
 	std::cout << std::endl;
 }
-
-//static uint64_t bigToLittleEndian(const uint64_t dword)
-//{
-//	uint64_t returnValue = dword <<
-//}
 
 #endif // UTILITIES_H

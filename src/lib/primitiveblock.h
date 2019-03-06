@@ -112,6 +112,24 @@ void circularShiftRowLeft<AES_256_KEY_SIZE>(uint8_t *row, uint8_t byteCount)
 }
 
 template <uint8_t keySize>
+void gatherRow(const uint8_t *state, const uint8_t rowIndex, uint8_t *row)
+{
+	for (uint8_t column = 0; column < KeySizeType<keySize>::value; column++)
+	{
+		row[column] = state[column + AES_BLOCK_SIZE * rowIndex];
+	}
+}
+
+template <uint8_t keySize>
+void writeBackRow(uint8_t *state, const uint8_t rowIndex, const uint8_t *row)
+{
+	for (uint8_t column = 0; column < KeySizeType<keySize>::value; column++)
+	{
+		state[column + AES_BLOCK_SIZE * rowIndex] = row[column];
+	}
+}
+
+template <uint8_t keySize>
 class PrimitiveBlock
 {
 public:
@@ -142,7 +160,7 @@ public:
 		{
 			for (uint8_t row = 0; row < _rowCount; row++)
 			{
-				this->_state[row][column] = *inputBlock;
+				this->_state[column][row] = *inputBlock;
 				inputBlock++;
 			}
 		}
@@ -166,12 +184,10 @@ public:
 		{
 			for (uint8_t row = 0; row < _rowCount; row++)
 			{
-				*outputBlock = this->_state[row][column];
+				*outputBlock = this->_state[column][row];
 				outputBlock++;
 			}
 		}
-		
-		printState(&this->_state[0][0], KeySizeType<keySize>::value);
 	}
 	
 	void decrypt(const uint8_t *inputBlock, uint8_t *outputBlock)
@@ -186,7 +202,8 @@ private:
 	static constexpr uint8_t _rowCount = AES_BLOCK_SIZE;
 	static constexpr uint8_t _columnCount = KeySizeType<keySize>::value;
 	static constexpr uint8_t _roundCount = KeySizeType<keySize>::rounds;
-	uint8_t _state[_rowCount][_columnCount];
+	
+	uint8_t _state[_columnCount][_rowCount];
 	
 	uint32_t _expandedKey[AES_BLOCK_SIZE * (_roundCount + 1)];
 	
@@ -220,40 +237,19 @@ private:
 	{
 		for (uint8_t column = 0; column < _columnCount; column++)
 		{
-			uint32_t word = 0;
+			uint32_t word = *reinterpret_cast<uint32_t *>(this->_state[column]);
+			
 #ifdef AES_LITTLE_ENDIAN
-			// Gather bytes in column
-			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
-			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[1][column];
-			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[2][column];
-			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[3][column];
-			
 			word = __builtin_bswap32(word);
-			
-			word ^= this->_expandedKey[round * _rowCount + column];
-			
-			word = __builtin_bswap32(word);
-			
-			// Write back word
-			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[0];
-			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[1];
-			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[2];
-			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[3];
-#else
-			// Gather bytes in column
-			reinterpret_cast<uint8_t *>(&word)[0] = this->_state[0][column];
-			reinterpret_cast<uint8_t *>(&word)[1] = this->_state[1][column];
-			reinterpret_cast<uint8_t *>(&word)[2] = this->_state[2][column];
-			reinterpret_cast<uint8_t *>(&word)[3] = this->_state[3][column];
-			
-			word ^= this->_expandedKey[round * _rowCount + column];
-			
-			// Write back word
-			this->_state[0][column] = reinterpret_cast<uint8_t *>(&word)[0];
-			this->_state[1][column] = reinterpret_cast<uint8_t *>(&word)[1];
-			this->_state[2][column] = reinterpret_cast<uint8_t *>(&word)[2];
-			this->_state[3][column] = reinterpret_cast<uint8_t *>(&word)[3];
 #endif
+			word ^= this->_expandedKey[round * _rowCount + column];
+			
+#ifdef AES_LITTLE_ENDIAN
+			word = __builtin_bswap32(word);
+#endif
+			
+			// Write back word
+			*reinterpret_cast<uint32_t *>(this->_state[column]) = word;
 		}
 	}
 	
@@ -270,15 +266,13 @@ private:
 		
 		for (uint8_t column = 0; column < _columnCount; column++)
 		{
-			word[0] = this->_state[0][column];
-			word[1] = this->_state[1][column];
-			word[2] = this->_state[2][column];
-			word[3] = this->_state[3][column];
+			// No endian conversion needed because the loaded value is stored immediantely
+			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
 			
-			this->_state[0][column] = _xtime(word[0]) ^ _xtime(word[1]) ^ word[1] ^ word[2] ^ word[3];
-			this->_state[1][column] = word[0] ^ _xtime(word[1]) ^ _xtime(word[2]) ^ word[2] ^ word[3];
-			this->_state[2][column] = word[0] ^ word[1] ^ _xtime(word[2]) ^ _xtime(word[3]) ^ word[3];
-			this->_state[3][column] = _xtime(word[0]) ^ word[0] ^ word[1] ^ word[2] ^ _xtime(word[3]);
+			this->_state[column][0] = _xtime(word[0]) ^ _xtime(word[1]) ^ word[1] ^ word[2] ^ word[3];
+			this->_state[column][1] = word[0] ^ _xtime(word[1]) ^ _xtime(word[2]) ^ word[2] ^ word[3];
+			this->_state[column][2] = word[0] ^ word[1] ^ _xtime(word[2]) ^ _xtime(word[3]) ^ word[3];
+			this->_state[column][3] = _xtime(word[0]) ^ word[0] ^ word[1] ^ word[2] ^ _xtime(word[3]);
 		}
 	}
 	
@@ -286,9 +280,25 @@ private:
 	
 	void _shiftRows()
 	{
-		circularShiftRowLeft<keySize>(this->_state[1], 1);
-		circularShiftRowLeft<keySize>(this->_state[2], 2);
-		circularShiftRowLeft<keySize>(this->_state[3], 3);
+		// Create a copy of the state
+		uint8_t stateCopy[_columnCount][_rowCount];
+		
+		for (uint8_t row = 1; row < _rowCount; row++)
+		{
+			for (uint8_t column = 0; column < _columnCount; column++)
+			{
+				stateCopy[column][row] = this->_state[column][row];
+			}
+		}
+		
+		// Perform transformation
+		for (uint8_t row = 1; row < _rowCount; row++)
+		{
+			for (uint8_t column = 0; column < _columnCount; column++)
+			{
+				this->_state[column][row] = stateCopy[(column + row) % _rowCount][row];
+			}
+		}
 	}
 	
 	void _inverseShiftRows();
@@ -296,11 +306,11 @@ private:
 	void _subBytes()
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t row = 0; row < _rowCount; row++)
+		for (uint8_t column = 0; column < _columnCount; column++)
 		{
-			for (uint8_t column = 0; column < _columnCount; column++)
+			for (uint8_t row = 0; row < _rowCount; row++)
 			{
-				this->_state[row][column] = _sBoxLut[this->_state[row][column]];
+				this->_state[column][row] = _sBoxLut[this->_state[column][row]];
 			}
 		}
 	}
