@@ -26,6 +26,9 @@ int main()
 	
 	block.encrypt(&input[0], &output[0]);
 	
+	WARN("KEY MUST BE ZEROED")
+	printBuffer(key, 16);
+	
 	INFO("CIPHERTEXT")
 	printBuffer(output, 16);
 	
