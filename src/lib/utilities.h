@@ -116,7 +116,7 @@ static inline void printBuffer(const uint8_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
-		std::cout << "0x" << std::hex << uint32_t(buffer[i]) << " ";
+		std::cout << "0x" << std::setw(sizeof (uint8_t) * 2) << std::setfill('0') << std::hex << uint32_t(buffer[i]) << " ";
 	}
 	
 	std::cout << std::endl;
@@ -126,7 +126,7 @@ static inline void printBuffer(const uint32_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
-		std::cout << "0x" << std::hex << uint32_t(buffer[i]) << " ";
+		std::cout << "0x" << std::setw(sizeof (uint32_t) * 2) << std::setfill('0') << std::hex << uint32_t(buffer[i]) << " ";
 	}
 	
 	std::cout << std::endl;
