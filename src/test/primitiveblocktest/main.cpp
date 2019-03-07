@@ -32,5 +32,10 @@ int main()
 	INFO("CIPHERTEXT")
 	printBuffer(output, 16);
 	
+	block.decrypt(&output[0], &input[0]);
+	
+	INFO("PLAINTEXT")
+	printBuffer(input, 16);
+	
 	return 0;
 }
