@@ -17,8 +17,10 @@
 #else
 
 #include <bitset>
+#include <iomanip>
 #include <iostream>
 #include <stdint.h>
+#include <sstream>
 ///
 /// \internal
 /// 
