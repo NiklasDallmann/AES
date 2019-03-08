@@ -67,6 +67,10 @@ int main()
 		else
 		{
 			FAIL("AES-128 Encryption")
+			INFO("RESULT")
+			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -78,10 +82,14 @@ int main()
 		else
 		{
 			FAIL("AES-128 Decryption")
-			return;
+			INFO("RESULT")
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(plaintext, AES_BLOCK_SIZE);
+//			return;
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 1000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 2000000);
 	};
 	
 	auto aes192Test = []()
@@ -111,6 +119,10 @@ int main()
 		else
 		{
 			FAIL("AES-192 Encryption")
+			INFO("RESULT")
+			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -122,10 +134,14 @@ int main()
 		else
 		{
 			FAIL("AES-192 Decryption")
-			return;
+			INFO("RESULT")
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(plaintext, AES_BLOCK_SIZE);
+//			return;
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 1000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 2000000);
 	};
 	
 	auto aes256Test = []()
@@ -156,6 +172,10 @@ int main()
 		else
 		{
 			FAIL("AES-256 Encryption")
+			INFO("RESULT")
+			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -167,10 +187,14 @@ int main()
 		else
 		{
 			FAIL("AES-256 Decryption")
-			return;
+			INFO("RESULT")
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			INFO("EXPECTED")
+			printBuffer(plaintext, AES_BLOCK_SIZE);
+//			return;
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 1000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 2000000);
 	};
 	
 	// Run tests

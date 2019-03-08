@@ -238,7 +238,7 @@ private:
 	static const uint8_t _galoisMultiply_d[];
 	static const uint8_t _galoisMultiply_e[];
 	
-	uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
+	alignas(uint32_t) uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 	
 	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)];
 	
@@ -302,23 +302,23 @@ private:
 	
 	void _mixCollumns()
 	{
-		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
+		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
 			
-			this->_state[column][0] = _galoisMultiply_2[word[0]] ^ _galoisMultiply_3[word[1]] ^ word[2] ^ word[3];
-			this->_state[column][1] = word[0] ^ _galoisMultiply_2[word[1]] ^ _galoisMultiply_3[word[2]] ^ word[3];
+			this->_state[column][0] = word[2] ^ word[3] ^ _galoisMultiply_2[word[0]] ^ _galoisMultiply_3[word[1]];
+			this->_state[column][1] = word[0] ^ word[3] ^ _galoisMultiply_2[word[1]] ^ _galoisMultiply_3[word[2]];
 			this->_state[column][2] = word[0] ^ word[1] ^ _galoisMultiply_2[word[2]] ^ _galoisMultiply_3[word[3]];
-			this->_state[column][3] = _galoisMultiply_3[word[0]] ^ word[1] ^ word[2] ^ _galoisMultiply_2[word[3]];
+			this->_state[column][3] = word[1] ^ word[2] ^ _galoisMultiply_2[word[3]] ^ _galoisMultiply_3[word[0]];
 		}
 	}
 	
 	void _inverseMixCollumns()
 	{
-		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
+		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
@@ -335,7 +335,7 @@ private:
 	void _shiftRows()
 	{
 		// Create a copy of the state
-		uint8_t stateCopy[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
+		alignas(uint32_t) uint8_t stateCopy[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 		
 		for (uint8_t row = 1; row < AES_BLOCK_SIZE; row++)
 		{
