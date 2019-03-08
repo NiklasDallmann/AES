@@ -325,10 +325,10 @@ private:
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
 			
-			this->_state[column][0] = _galoisMultiply_e[word[0]] ^ _galoisMultiply_b[word[1]] ^ _galoisMultiply_d[word[2]] ^ _galoisMultiply_9[word[3]];
-			this->_state[column][1] = _galoisMultiply_9[word[0]] ^ _galoisMultiply_e[word[1]] ^ _galoisMultiply_b[word[2]] ^ _galoisMultiply_d[word[3]];
-			this->_state[column][2] = _galoisMultiply_d[word[0]] ^ _galoisMultiply_9[word[1]] ^ _galoisMultiply_e[word[2]] ^ _galoisMultiply_b[word[3]];
-			this->_state[column][3] = _galoisMultiply_b[word[0]] ^ _galoisMultiply_d[word[1]] ^ _galoisMultiply_9[word[2]] ^ _galoisMultiply_e[word[3]];
+			this->_state[column][0] = _galoisMultiply_9[word[3]] ^ _galoisMultiply_b[word[1]] ^ _galoisMultiply_d[word[2]] ^ _galoisMultiply_e[word[0]];
+			this->_state[column][1] = _galoisMultiply_9[word[0]] ^ _galoisMultiply_b[word[2]] ^ _galoisMultiply_d[word[3]] ^ _galoisMultiply_e[word[1]];
+			this->_state[column][2] = _galoisMultiply_9[word[1]] ^ _galoisMultiply_b[word[3]] ^ _galoisMultiply_d[word[0]] ^ _galoisMultiply_e[word[2]];
+			this->_state[column][3] = _galoisMultiply_9[word[2]] ^ _galoisMultiply_b[word[0]] ^ _galoisMultiply_d[word[1]] ^ _galoisMultiply_e[word[3]];
 		}
 	}
 	
