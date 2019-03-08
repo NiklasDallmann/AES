@@ -147,7 +147,7 @@ public:
 	~PrimitiveBlock()
 	{
 #ifdef AES_COMPILER_GCC
-		explicit_bzero(this->_state, this->_rowCount * this->_columnCount * sizeof (uint8_t));
+		explicit_bzero(this->_state, AES_BLOCK_SIZE * AES_BLOCK_SIZE * sizeof (uint8_t));
 #elif
 		static_assert (false, "Compiler not supported.");
 #endif
@@ -156,9 +156,9 @@ public:
 	void encrypt(const uint8_t *plainBlock, uint8_t *cipherBlock)
 	{
 		// Copy plain text into state
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				this->_state[column][row] = *plainBlock;
 				plainBlock++;
@@ -167,7 +167,7 @@ public:
 		
 		this->_addRoundKey(0);
 		
-		for (uint8_t round = 1; round < _roundCount; round++)
+		for (uint8_t round = 1; round < KeySizeType<keySize>::rounds; round++)
 		{
 			this->_subBytes();
 			this->_shiftRows();
@@ -177,12 +177,12 @@ public:
 		
 		this->_subBytes();
 		this->_shiftRows();
-		this->_addRoundKey(_roundCount);
+		this->_addRoundKey(KeySizeType<keySize>::rounds);
 		
 		// Write state into cipher text
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				*cipherBlock = this->_state[column][row];
 				cipherBlock++;
@@ -193,18 +193,18 @@ public:
 	void decrypt(const uint8_t *cipherBlock, uint8_t *plainBlock)
 	{
 		// Copy plain text into state
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				this->_state[column][row] = *cipherBlock;
 				cipherBlock++;
 			}
 		}
 		
-		this->_addRoundKey(_roundCount);
+		this->_addRoundKey(KeySizeType<keySize>::rounds);
 		
-		for (uint8_t round = _roundCount - 1; round > 0; round--)
+		for (uint8_t round = KeySizeType<keySize>::rounds - 1; round > 0; round--)
 		{
 			this->_inverseShiftRows();
 			this->_inverseSubBytes();
@@ -217,9 +217,9 @@ public:
 		this->_addRoundKey(0);
 		
 		// Write state into cipher text
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				*plainBlock = this->_state[column][row];
 				plainBlock++;
@@ -238,50 +238,46 @@ private:
 	static const uint8_t _galoisMultiply_d[];
 	static const uint8_t _galoisMultiply_e[];
 	
-	static constexpr uint8_t _rowCount = AES_BLOCK_SIZE;
-	static constexpr uint8_t _columnCount = KeySizeType<keySize>::value;
-	static constexpr uint8_t _roundCount = KeySizeType<keySize>::rounds;
+	uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 	
-	uint8_t _state[_columnCount][_rowCount];
-	
-	uint32_t _expandedKey[AES_BLOCK_SIZE * (_roundCount + 1)];
+	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)];
 	
 	void _expandKey(const uint8_t *key)
 	{
 		uint32_t tmp = 0;
 		
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < KeySizeType<keySize>::value; column++)
 		{
 			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]);
 		}
 		
-		for (uint8_t column = _columnCount; column < (_rowCount * (_roundCount + 1)); column++)
+		for (uint8_t column = KeySizeType<keySize>::value; column < (AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)); column++)
 		{
 			tmp = _expandedKey[column - 1];
 			
-			if ((column % _columnCount) == 0)
+			if ((column % KeySizeType<keySize>::value) == 0)
 			{
-				tmp = this->_subWord(this->_rotWord(tmp)) ^ (_rCon[column / _columnCount] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (_rCon[column / KeySizeType<keySize>::value] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
 			}
-			else if ((_columnCount > 6) & ((column % _columnCount) == 4))
+			else if ((KeySizeType<keySize>::value > 6) & ((column % KeySizeType<keySize>::value) == 4))
 			{
 				tmp = this->_subWord(tmp);
 			}
 			
-			this->_expandedKey[column] = this->_expandedKey[column - _columnCount] ^ tmp;
+			this->_expandedKey[column] = this->_expandedKey[column - KeySizeType<keySize>::value] ^ tmp;
 		}
 	}
 	
 	void _addRoundKey(const uint8_t round)
 	{
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			uint32_t word = *reinterpret_cast<uint32_t *>(this->_state[column]);
 			
 #ifdef AES_LITTLE_ENDIAN
 			word = __builtin_bswap32(word);
 #endif
-			word ^= this->_expandedKey[round * _rowCount + column];
+			word ^= this->_expandedKey[round * AES_BLOCK_SIZE + column];
 			
 #ifdef AES_LITTLE_ENDIAN
 			word = __builtin_bswap32(word);
@@ -308,7 +304,7 @@ private:
 	{
 		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
@@ -324,7 +320,7 @@ private:
 	{
 		uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
@@ -339,22 +335,22 @@ private:
 	void _shiftRows()
 	{
 		// Create a copy of the state
-		uint8_t stateCopy[_columnCount][_rowCount];
+		uint8_t stateCopy[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 		
-		for (uint8_t row = 1; row < _rowCount; row++)
+		for (uint8_t row = 1; row < AES_BLOCK_SIZE; row++)
 		{
-			for (uint8_t column = 0; column < _columnCount; column++)
+			for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 			{
 				stateCopy[column][row] = this->_state[column][row];
 			}
 		}
 		
 		// Perform transformation
-		for (uint8_t row = 1; row < _rowCount; row++)
+		for (uint8_t row = 1; row < AES_BLOCK_SIZE; row++)
 		{
-			for (uint8_t column = 0; column < _columnCount; column++)
+			for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 			{
-				this->_state[column][row] = stateCopy[(column + row) % _rowCount][row];
+				this->_state[column][row] = stateCopy[(column + row) % AES_BLOCK_SIZE][row];
 			}
 		}
 	}
@@ -362,22 +358,22 @@ private:
 	void _inverseShiftRows()
 	{
 		// Create a copy of the state
-		uint8_t stateCopy[_columnCount][_rowCount];
+		uint8_t stateCopy[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 		
-		for (uint8_t row = 1; row < _rowCount; row++)
+		for (uint8_t row = 1; row < AES_BLOCK_SIZE; row++)
 		{
-			for (uint8_t column = 0; column < _columnCount; column++)
+			for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 			{
 				stateCopy[column][row] = this->_state[column][row];
 			}
 		}
 		
 		// Perform transformation
-		for (uint8_t row = 1; row < _rowCount; row++)
+		for (uint8_t row = 1; row < AES_BLOCK_SIZE; row++)
 		{
-			for (uint8_t column = 0; column < _columnCount; column++)
+			for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 			{
-				this->_state[(column + row) % _rowCount][row] = stateCopy[column][row];
+				this->_state[(column + row) % AES_BLOCK_SIZE][row] = stateCopy[column][row];
 			}
 		}
 	}
@@ -385,9 +381,9 @@ private:
 	void _subBytes()
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				this->_state[column][row] = _sBox_enc[this->_state[column][row]];
 			}
@@ -397,9 +393,9 @@ private:
 	void _inverseSubBytes()
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < _columnCount; column++)
+		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			for (uint8_t row = 0; row < _rowCount; row++)
+			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
 				this->_state[column][row] = _sBox_dec[this->_state[column][row]];
 			}

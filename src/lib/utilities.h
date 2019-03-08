@@ -140,9 +140,9 @@ static inline void printState(const uint8_t *state)
 	// Transform state to row-major for simpler access
 	for (uint8_t row = 0; row < 4; row++)
 	{
-		for (uint8_t column = 0; column < keySize; column++)
+		for (uint8_t column = 0; column < 4; column++)
 		{
-			stateData[row][column] = state[column * keySize + row];
+			stateData[row][column] = state[column * 4 + row];
 		}
 	}
 	
