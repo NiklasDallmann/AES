@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <stdint.h>
 #include <stdlib.h>
@@ -10,6 +11,32 @@
 
 #define FAIL(text) \
 	std::cout << "[\x1B[31mFAIL\x1B[0m]		" << text << std::endl;
+
+#define BENCHMARK(text) \
+	std::cout << "[\x1B[34mBENCHMARK\x1B[0m]	" << text << std::endl;
+
+template <typename Function>
+void benchmark(Function f, const std::string &tag, size_t numberOfCycles)
+{
+	auto startTimePoint = std::chrono::high_resolution_clock::now();
+	
+	for (size_t cycle = 0; cycle < numberOfCycles; cycle++)
+	{
+		f();
+	}
+	
+	auto endTimePoint = std::chrono::high_resolution_clock::now();
+	auto duration = (endTimePoint - startTimePoint);
+	double millisecondsTaken = double(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
+	double millisecondsPerCycle = (millisecondsTaken / double(numberOfCycles));
+	double secondsPerCycle = millisecondsPerCycle / double(1000);
+	double bandwidth = 0;
+	uint64_t dataSize = AES_BLOCK_SIZE;
+	
+	bandwidth = (double(dataSize) / double(1000000) / secondsPerCycle);
+	
+	BENCHMARK(tag << "	" << millisecondsPerCycle << " ms/cycle	" << bandwidth << " MB/s")
+}
 
 int main()
 {
@@ -31,12 +58,7 @@ int main()
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
 		Aes::PrimitiveBlock<AES_128_KEY_SIZE> block(key);
-		
 		block.encrypt(plaintext, ciphertext);
-		
-//		INFO("CIPHERTEXT")
-//		printBuffer(expectedCiphertext, 16);
-//		printBuffer(ciphertext, 16);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
 		{
@@ -49,10 +71,6 @@ int main()
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
 		
-//		INFO("PLAINTEXT")
-//		printBuffer(plaintext, 16);
-//		printBuffer(decryptedPlaintext, 16);
-		
 		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
 		{
 			SUCCESS("AES-128 Decryption")
@@ -60,7 +78,10 @@ int main()
 		else
 		{
 			FAIL("AES-128 Decryption")
+			return;
 		}
+		
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 1000000);
 	};
 	
 	auto aes192Test = []()
@@ -81,12 +102,7 @@ int main()
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
 		Aes::PrimitiveBlock<AES_192_KEY_SIZE> block(key);
-		
 		block.encrypt(plaintext, ciphertext);
-		
-//		INFO("CIPHERTEXT")
-//		printBuffer(expectedCiphertext, 16);
-//		printBuffer(ciphertext, 16);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
 		{
@@ -99,10 +115,6 @@ int main()
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
 		
-//		INFO("PLAINTEXT")
-//		printBuffer(plaintext, 16);
-//		printBuffer(decryptedPlaintext, 16);
-		
 		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
 		{
 			SUCCESS("AES-192 Decryption")
@@ -110,7 +122,10 @@ int main()
 		else
 		{
 			FAIL("AES-192 Decryption")
+			return;
 		}
+		
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 1000000);
 	};
 	
 	auto aes256Test = []()
@@ -132,12 +147,7 @@ int main()
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
 		Aes::PrimitiveBlock<AES_256_KEY_SIZE> block(key);
-		
 		block.encrypt(plaintext, ciphertext);
-		
-//		INFO("CIPHERTEXT")
-//		printBuffer(expectedCiphertext, 16);
-//		printBuffer(ciphertext, 16);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
 		{
@@ -150,10 +160,6 @@ int main()
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
 		
-//		INFO("PLAINTEXT")
-//		printBuffer(plaintext, 16);
-//		printBuffer(decryptedPlaintext, 16);
-		
 		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
 		{
 			SUCCESS("AES-256 Decryption")
@@ -161,7 +167,10 @@ int main()
 		else
 		{
 			FAIL("AES-256 Decryption")
+			return;
 		}
+		
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 1000000);
 	};
 	
 	// Run tests

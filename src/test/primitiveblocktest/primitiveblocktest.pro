@@ -7,3 +7,5 @@ INCLUDEPATH += $$PWD/../../lib
 
 SOURCES += \
         main.cpp
+
+include($$PWD/../../base_configuration.pri)
