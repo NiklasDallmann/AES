@@ -57,7 +57,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::PrimitiveBlock<AES_128_KEY_SIZE> block(key);
+		Aes::Key128 keyObj(key);
+		Aes::Block128 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
@@ -108,7 +109,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::PrimitiveBlock<AES_192_KEY_SIZE> block(key);
+		Aes::Key192 keyObj(key);
+		Aes::Block192 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
@@ -160,7 +162,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::PrimitiveBlock<AES_256_KEY_SIZE> block(key);
+		Aes::Key256 keyObj(key);
+		Aes::Block256 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)

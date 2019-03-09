@@ -6,11 +6,12 @@ TEMPLATE				= lib
 CONFIG					+= staticlib
 DESTDIR					= $$PWD/../../target/lib
 
-SOURCES					+= \
-    primitiveblock.cpp
+SOURCES					+=
 
 HEADERS					+= \
     primitiveblock.h \
-    utilities.h
+    utilities.h \
+    key.h \
+    constants.h
 
 include($$PWD/../../base_configuration.pri)

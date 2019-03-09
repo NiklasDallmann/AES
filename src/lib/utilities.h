@@ -20,7 +20,11 @@
 #include <iomanip>
 #include <iostream>
 #include <stdint.h>
+#include <string.h>
 #include <sstream>
+
+#include "constants.h"
+
 ///
 /// \internal
 /// 
@@ -112,6 +116,54 @@
 #define AES_LITTLE_ENDIAN
 #endif
 
+static inline void safeSetZero(void *source, size_t size)
+{
+#ifdef AES_COMPILER_GCC
+		explicit_bzero(source, size);
+#elif
+		static_assert (false, "Compiler not supported.");
+#endif
+}
+
+template <typename T>
+T rotateLeft(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value << bitCount | value >> (((sizeof (T) * 8)) - bitCount));
+}
+
+template <typename T>
+T rotateRight(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value >> bitCount | value << (((sizeof (T) * 8)) - bitCount));
+}
+
+template <typename T>
+T changeEndianness(const T value);
+
+template <>
+uint32_t changeEndianness<uint32_t>(const uint32_t value)
+{
+#if defined(AES_LITTLE_ENDIAN) && defined(AES_COMPILER_GCC)
+	return __builtin_bswap32(value);
+#else
+	return value;
+#endif
+}
+
+template <>
+uint64_t changeEndianness<uint64_t>(const uint64_t value)
+{
+#if defined(AES_LITTLE_ENDIAN) && defined(AES_COMPILER_GCC)
+	return __builtin_bswap64(value);
+#else
+	return value;
+#endif
+}
+
 static inline void printBuffer(const uint8_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
@@ -152,6 +204,44 @@ static inline void printState(const uint8_t *state)
 	}
 	
 	std::cout << std::endl;
+}
+
+void generateT3()
+{
+	std::stringstream table;
+	
+	INFO("BEGIN T3")
+	
+	for (uint32_t a = 0; a <= 0xff; a++)
+	{
+		uint32_t word = 0;
+		
+		// Generate table entry
+		uint8_t *ptr = reinterpret_cast<uint8_t *>(&word);
+		
+		ptr[2] = Aes::galoisMultiply_2[Aes::sBox_enc[a]];
+		ptr[0] = Aes::sBox_enc[a];
+		ptr[1] = Aes::sBox_enc[a];
+		ptr[3] = Aes::galoisMultiply_2[Aes::sBox_enc[a]];
+		
+		word = __builtin_bswap32(word);
+		
+		if (a % 8 == 0 && a != 0)
+		{
+			table << "\n";
+		}
+		
+		table << "0x" << std::hex << std::setw(8) << std::setfill('0') << word;
+		
+		if (a != 0xff)
+		{
+			table << ", ";
+		}
+	}
+	
+	std::cout << table.str() << std::endl;
+	
+	INFO("END T3")
 }
 
 #endif // UTILITIES_H
