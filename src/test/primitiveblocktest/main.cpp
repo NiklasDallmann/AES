@@ -68,9 +68,9 @@ int main()
 		{
 			FAIL("AES-128 Encryption")
 			INFO("RESULT")
-			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			printBuffer(ciphertext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE * 4);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -83,10 +83,9 @@ int main()
 		{
 			FAIL("AES-128 Decryption")
 			INFO("RESULT")
-			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(plaintext, AES_BLOCK_SIZE);
-//			return;
+			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
 		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 2000000);
@@ -120,9 +119,9 @@ int main()
 		{
 			FAIL("AES-192 Encryption")
 			INFO("RESULT")
-			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			printBuffer(ciphertext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE * 4);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -135,10 +134,9 @@ int main()
 		{
 			FAIL("AES-192 Decryption")
 			INFO("RESULT")
-			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(plaintext, AES_BLOCK_SIZE);
-//			return;
+			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
 		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 2000000);
@@ -173,9 +171,9 @@ int main()
 		{
 			FAIL("AES-256 Encryption")
 			INFO("RESULT")
-			printBuffer(ciphertext, AES_BLOCK_SIZE);
+			printBuffer(ciphertext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(expectedCiphertext, AES_BLOCK_SIZE);
+			printBuffer(expectedCiphertext, AES_BLOCK_SIZE * 4);
 		}
 		
 		block.decrypt(ciphertext, decryptedPlaintext);
@@ -188,10 +186,9 @@ int main()
 		{
 			FAIL("AES-256 Decryption")
 			INFO("RESULT")
-			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE);
+			printBuffer(decryptedPlaintext, AES_BLOCK_SIZE * 4);
 			INFO("EXPECTED")
-			printBuffer(plaintext, AES_BLOCK_SIZE);
-//			return;
+			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
 		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 2000000);

@@ -132,10 +132,9 @@ static inline void printBuffer(const uint32_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-template <uint8_t keySize>
 static inline void printState(const uint8_t *state)
 {
-	uint8_t stateData[4][keySize];
+	uint8_t stateData[4][4];
 	
 	// Transform state to row-major for simpler access
 	for (uint8_t row = 0; row < 4; row++)
@@ -149,7 +148,7 @@ static inline void printState(const uint8_t *state)
 	// Print rows
 	for (uint8_t row = 0; row < 4; row++)
 	{
-		printBuffer(stateData[row], keySize);
+		printBuffer(stateData[row], 4);
 	}
 	
 	std::cout << std::endl;
