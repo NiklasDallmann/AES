@@ -198,9 +198,11 @@ int main()
 	};
 	
 	// Run tests
-	aes128Test();
-	aes192Test();
-	aes256Test();
+//	aes128Test();
+//	aes192Test();
+//	aes256Test();
+	
+	generateTTable();
 	
 	return 0;
 }

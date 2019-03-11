@@ -218,11 +218,11 @@ static inline void printState(const uint8_t *state)
 	std::cout << std::endl;
 }
 
-void generateT3()
+void generateTTable()
 {
 	std::stringstream table;
 	
-	INFO("BEGIN T3")
+	INFO("BEGIN T TABLE")
 	
 	for (uint32_t a = 0; a <= 0xff; a++)
 	{
@@ -231,10 +231,10 @@ void generateT3()
 		// Generate table entry
 		uint8_t *ptr = reinterpret_cast<uint8_t *>(&word);
 		
-		ptr[2] = Aes::galoisMultiply_2[Aes::sBox_enc[a]];
-		ptr[0] = Aes::sBox_enc[a];
-		ptr[1] = Aes::sBox_enc[a];
-		ptr[3] = Aes::galoisMultiply_2[Aes::sBox_enc[a]];
+		ptr[0] = Aes::galoisMultiply_9[Aes::sBox_dec[a]];
+		ptr[1] = Aes::galoisMultiply_d[Aes::sBox_dec[a]];
+		ptr[2] = Aes::galoisMultiply_b[Aes::sBox_dec[a]];
+		ptr[3] = Aes::galoisMultiply_e[Aes::sBox_dec[a]];
 		
 		word = __builtin_bswap32(word);
 		
@@ -253,7 +253,7 @@ void generateT3()
 	
 	std::cout << table.str() << std::endl;
 	
-	INFO("END T3")
+	INFO("END T TABLE")
 }
 
 #endif // UTILITIES_H
