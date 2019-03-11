@@ -35,61 +35,64 @@ public:
 	
 	void encrypt(const uint8_t *plainBlock, uint8_t *cipherBlock)
 	{
-		// Copy plain text into state
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
-		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
-			{
-				this->_state[column][row] = *plainBlock;
-				plainBlock++;
-			}
-		}
+		// Column vectors
+		uint32_t s0 = changeEndianness(*reinterpret_cast<const uint32_t *>(plainBlock));
+		uint32_t s1 = changeEndianness(*reinterpret_cast<const uint32_t *>(plainBlock + sizeof (uint32_t)));
+		uint32_t s2 = changeEndianness(*reinterpret_cast<const uint32_t *>(plainBlock + sizeof (uint32_t) * 2));
+		uint32_t s3 = changeEndianness(*reinterpret_cast<const uint32_t *>(plainBlock + sizeof (uint32_t) * 3));
 		
-		this->_addRoundKey(0);
+		// Temporaries
+		uint32_t t0 = 0;
+		uint32_t t1 = 0;
+		uint32_t t2 = 0;
+		uint32_t t3 = 0;
 		
+		// Key index
+		uint32_t k = 0;
+		
+		// Add round key; first round
+		s0 ^= this->_expandedKey[k + 0];
+		s1 ^= this->_expandedKey[k + 1];
+		s2 ^= this->_expandedKey[k + 2];
+		s3 ^= this->_expandedKey[k + 3];
+		k += 4;
+		
+		*reinterpret_cast<uint32_t *>(&this->_state[0][0]) = changeEndianness(s0);
+		*reinterpret_cast<uint32_t *>(&this->_state[1][0]) = changeEndianness(s1);
+		*reinterpret_cast<uint32_t *>(&this->_state[2][0]) = changeEndianness(s2);
+		*reinterpret_cast<uint32_t *>(&this->_state[3][0]) = changeEndianness(s3);
+		
+		// Perform transformation on middle rounds
 		for (uint8_t round = 1; round < KeySizeType<keySize>::rounds; round++)
 		{
-			uint32_t s0 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[0][0]));
-			uint32_t s1 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[1][0]));
-			uint32_t s2 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[2][0]));
-			uint32_t s3 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[3][0]));
+			t0 = t0_enc[uint8_t(s0 >> 24)] ^ t1_enc[uint8_t(s1 >> 16)] ^ t2_enc[uint8_t(s2 >> 8)] ^ t3_enc[uint8_t(s3)] ^ this->_expandedKey[k + 0];
+			t1 = t0_enc[uint8_t(s1 >> 24)] ^ t1_enc[uint8_t(s2 >> 16)] ^ t2_enc[uint8_t(s3 >> 8)] ^ t3_enc[uint8_t(s0)] ^ this->_expandedKey[k + 1];
+			t2 = t0_enc[uint8_t(s2 >> 24)] ^ t1_enc[uint8_t(s3 >> 16)] ^ t2_enc[uint8_t(s0 >> 8)] ^ t3_enc[uint8_t(s1)] ^ this->_expandedKey[k + 2];
+			t3 = t0_enc[uint8_t(s3 >> 24)] ^ t1_enc[uint8_t(s0 >> 16)] ^ t2_enc[uint8_t(s1 >> 8)] ^ t3_enc[uint8_t(s2)] ^ this->_expandedKey[k + 3];
 			
-			uint32_t t0 = 0;
-			uint32_t t1 = 0;
-			uint32_t t2 = 0;
-			uint32_t t3 = 0;
+			s0 = t0;
+			s1 = t1;
+			s2 = t2;
+			s3 = t3;
 			
-			t0 = t0_enc[uint8_t(s0 >> 24)] ^ t1_enc[uint8_t(s1 >> 16)] ^ t2_enc[uint8_t(s2 >> 8)] ^ t3_enc[uint8_t(s3)];
-			t1 = t0_enc[uint8_t(s1 >> 24)] ^ t1_enc[uint8_t(s2 >> 16)] ^ t2_enc[uint8_t(s3 >> 8)] ^ t3_enc[uint8_t(s0)];
-			t2 = t0_enc[uint8_t(s2 >> 24)] ^ t1_enc[uint8_t(s3 >> 16)] ^ t2_enc[uint8_t(s0 >> 8)] ^ t3_enc[uint8_t(s1)];
-			t3 = t0_enc[uint8_t(s3 >> 24)] ^ t1_enc[uint8_t(s0 >> 16)] ^ t2_enc[uint8_t(s1 >> 8)] ^ t3_enc[uint8_t(s2)];
-			
-			s0 = changeEndianness(t0);
-			s1 = changeEndianness(t1);
-			s2 = changeEndianness(t2);
-			s3 = changeEndianness(t3);
-			
-			*reinterpret_cast<uint32_t *>(&this->_state[0][0]) = s0;
-			*reinterpret_cast<uint32_t *>(&this->_state[1][0]) = s1;
-			*reinterpret_cast<uint32_t *>(&this->_state[2][0]) = s2;
-			*reinterpret_cast<uint32_t *>(&this->_state[3][0]) = s3;
-			
-			this->_addRoundKey(round);
+			k += 4;
 		}
 		
-		this->_subBytes();
-		this->_shiftRows();
-		this->_addRoundKey(KeySizeType<keySize>::rounds);
+		// Final round
+		s0 = (uint32_t(sBox_enc[uint8_t(t0 >> 24)]) << 24) | (uint32_t(sBox_enc[uint8_t(t1 >> 16)]) << 16) | (uint32_t(sBox_enc[uint8_t(t2 >> 8)]) << 8) | (uint32_t(sBox_enc[uint8_t(t3)]));
+		s1 = (uint32_t(sBox_enc[uint8_t(t1 >> 24)]) << 24) | (uint32_t(sBox_enc[uint8_t(t2 >> 16)]) << 16) | (uint32_t(sBox_enc[uint8_t(t3 >> 8)]) << 8) | (uint32_t(sBox_enc[uint8_t(t0)]));
+		s2 = (uint32_t(sBox_enc[uint8_t(t2 >> 24)]) << 24) | (uint32_t(sBox_enc[uint8_t(t3 >> 16)]) << 16) | (uint32_t(sBox_enc[uint8_t(t0 >> 8)]) << 8) | (uint32_t(sBox_enc[uint8_t(t1)]));
+		s3 = (uint32_t(sBox_enc[uint8_t(t3 >> 24)]) << 24) | (uint32_t(sBox_enc[uint8_t(t0 >> 16)]) << 16) | (uint32_t(sBox_enc[uint8_t(t1 >> 8)]) << 8) | (uint32_t(sBox_enc[uint8_t(t2)]));
 		
-		// Write state into cipher text
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
-		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
-			{
-				*cipherBlock = this->_state[column][row];
-				cipherBlock++;
-			}
-		}
+		s0 ^= this->_expandedKey[k + 0];
+		s1 ^= this->_expandedKey[k + 1];
+		s2 ^= this->_expandedKey[k + 2];
+		s3 ^= this->_expandedKey[k + 3];
+		
+		*reinterpret_cast<uint32_t *>(cipherBlock) = changeEndianness(s0);
+		*reinterpret_cast<uint32_t *>(cipherBlock + sizeof (uint32_t)) = changeEndianness(s1);
+		*reinterpret_cast<uint32_t *>(cipherBlock + sizeof (uint32_t) * 2) = changeEndianness(s2);
+		*reinterpret_cast<uint32_t *>(cipherBlock + sizeof (uint32_t) * 3) = changeEndianness(s3);
 	}
 	
 	void decrypt(const uint8_t *cipherBlock, uint8_t *plainBlock)
@@ -166,9 +169,7 @@ private:
 		{
 			uint32_t roundKey = *reinterpret_cast<uint32_t *>(this->_state[column]);
 			
-			roundKey = changeEndianness(roundKey);
-			roundKey ^= this->_expandedKey[round * AES_BLOCK_SIZE + column];
-			roundKey = changeEndianness(roundKey);
+			roundKey ^= changeEndianness(this->_expandedKey[round * AES_BLOCK_SIZE + column]);
 			
 			// Write back word
 			*reinterpret_cast<uint32_t *>(this->_state[column]) = roundKey;
