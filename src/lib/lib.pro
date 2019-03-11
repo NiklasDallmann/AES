@@ -9,9 +9,11 @@ DESTDIR					= $$PWD/../../target/lib
 SOURCES					+=
 
 HEADERS					+= \
-    primitiveblock.h \
     utilities.h \
     key.h \
-    constants.h
+    constants.h \
+    block.h \
+    mode.h \
+    ctr.h
 
 include($$PWD/../../base_configuration.pri)

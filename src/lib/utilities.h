@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sstream>
+#include <type_traits>
 
 #include "constants.h"
 
@@ -87,6 +88,17 @@
 #define AES_AVX2_SUPPORT
 #endif
 
+#ifdef __SSE2__
+///
+/// \internal
+/// 
+/// \brief	Defined if compiler and platform support AVX2.
+/// 
+/// \since	1.0
+///
+#define AES_SSE2_SUPPORT
+#endif
+
 #if defined(__GNUC__) && !defined(__clang__)
 ///
 /// \brief	Defined if compiler is GCC.
@@ -142,10 +154,10 @@ T rotateRight(T value, size_t bitCount)
 }
 
 template <typename T>
-T changeEndianness(const T value);
+inline T changeEndianness(const T value);
 
 template <>
-uint32_t changeEndianness<uint32_t>(const uint32_t value)
+inline uint32_t changeEndianness<uint32_t>(const uint32_t value)
 {
 #if defined(AES_LITTLE_ENDIAN) && defined(AES_COMPILER_GCC)
 	return __builtin_bswap32(value);
@@ -155,7 +167,7 @@ uint32_t changeEndianness<uint32_t>(const uint32_t value)
 }
 
 template <>
-uint64_t changeEndianness<uint64_t>(const uint64_t value)
+inline uint64_t changeEndianness<uint64_t>(const uint64_t value)
 {
 #if defined(AES_LITTLE_ENDIAN) && defined(AES_COMPILER_GCC)
 	return __builtin_bswap64(value);

@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "primitiveblock.h"
+#include "block.h"
 #include "utilities.h"
 
 #define SUCCESS(text) \
@@ -89,7 +89,7 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 2000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 5000000);
 	};
 	
 	auto aes192Test = []()
@@ -141,7 +141,7 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 2000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 5000000);
 	};
 	
 	auto aes256Test = []()
@@ -194,7 +194,7 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 2000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 5000000);
 	};
 	
 	// Run tests

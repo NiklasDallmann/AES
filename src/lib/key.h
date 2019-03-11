@@ -39,6 +39,8 @@ template <uint8_t keySize>
 class Key
 {
 public:
+	using key_size_type = KeySizeType<keySize>;
+	
 	Key() = default;
 	
 	Key(uint8_t *key)

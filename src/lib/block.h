@@ -1,9 +1,8 @@
-#ifndef PRIMITIVEBLOCK_H
-#define PRIMITIVEBLOCK_H
+#ifndef BLOCK_H
+#define BLOCK_H
 
 #include <stdint.h>
 #include <string.h>
-#include <type_traits>
 
 #include "constants.h"
 #include "key.h"
@@ -13,23 +12,24 @@ namespace Aes
 {
 
 template <uint8_t keySize>
-class PrimitiveBlock
+class Block
 {
 public:
-	explicit PrimitiveBlock(const Key<keySize> &key)
+	explicit Block(const Key<keySize> &key)
 	{
 		this->_expandKey(key.key);
 	}
 	
-	explicit PrimitiveBlock(uint8_t *key)
+	explicit Block(uint8_t *key)
 	{
 		this->_expandKey(key);
 		
 		safeSetZero(key, keySize * sizeof (uint32_t));
 	}
 	
-	~PrimitiveBlock()
+	~Block()
 	{
+		safeSetZero(this->_expandedKey, sizeof (this->_expandedKey));
 		safeSetZero(this->_state, AES_BLOCK_SIZE * AES_BLOCK_SIZE * sizeof (uint8_t));
 	}
 	
@@ -49,43 +49,32 @@ public:
 		
 		for (uint8_t round = 1; round < KeySizeType<keySize>::rounds; round++)
 		{
-			this->_subBytes();
-			this->_shiftRows();
-			this->_mixCollumns();
+			uint32_t s0 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[0][0]));
+			uint32_t s1 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[1][0]));
+			uint32_t s2 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[2][0]));
+			uint32_t s3 = changeEndianness(*reinterpret_cast<uint32_t *>(&this->_state[3][0]));
+			
+			uint32_t t0 = 0;
+			uint32_t t1 = 0;
+			uint32_t t2 = 0;
+			uint32_t t3 = 0;
+			
+			t0 = t0_enc[uint8_t(s0 >> 24)] ^ t1_enc[uint8_t(s1 >> 16)] ^ t2_enc[uint8_t(s2 >> 8)] ^ t3_enc[uint8_t(s3)];
+			t1 = t0_enc[uint8_t(s1 >> 24)] ^ t1_enc[uint8_t(s2 >> 16)] ^ t2_enc[uint8_t(s3 >> 8)] ^ t3_enc[uint8_t(s0)];
+			t2 = t0_enc[uint8_t(s2 >> 24)] ^ t1_enc[uint8_t(s3 >> 16)] ^ t2_enc[uint8_t(s0 >> 8)] ^ t3_enc[uint8_t(s1)];
+			t3 = t0_enc[uint8_t(s3 >> 24)] ^ t1_enc[uint8_t(s0 >> 16)] ^ t2_enc[uint8_t(s1 >> 8)] ^ t3_enc[uint8_t(s2)];
+			
+			s0 = changeEndianness(t0);
+			s1 = changeEndianness(t1);
+			s2 = changeEndianness(t2);
+			s3 = changeEndianness(t3);
+			
+			*reinterpret_cast<uint32_t *>(&this->_state[0][0]) = s0;
+			*reinterpret_cast<uint32_t *>(&this->_state[1][0]) = s1;
+			*reinterpret_cast<uint32_t *>(&this->_state[2][0]) = s2;
+			*reinterpret_cast<uint32_t *>(&this->_state[3][0]) = s3;
+			
 			this->_addRoundKey(round);
-			
-//			// Create a copy of the state
-//			alignas(uint32_t) uint8_t stateCopy[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
-			
-//			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
-//			{
-//				for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
-//				{
-//					stateCopy[column][row] = this->_state[column][row];
-//				}
-//			}
-			
-//			uint32_t columnVector0 = changeEndianness(*reinterpret_cast<uint32_t *>(&stateCopy[0][0]));
-//			uint32_t columnVector1 = changeEndianness(*reinterpret_cast<uint32_t *>(&stateCopy[1][0]));
-//			uint32_t columnVector2 = changeEndianness(*reinterpret_cast<uint32_t *>(&stateCopy[2][0]));
-//			uint32_t columnVector3 = changeEndianness(*reinterpret_cast<uint32_t *>(&stateCopy[3][0]));
-			
-//			columnVector0 = _t0_enc[stateCopy[0][0]] ^ _t1_enc[stateCopy[3][1]] ^ _t2_enc[stateCopy[2][2]] ^ _t3_enc[stateCopy[1][3]];
-//			columnVector1 = _t0_enc[stateCopy[1][0]] ^ _t1_enc[stateCopy[0][1]] ^ _t2_enc[stateCopy[3][2]] ^ _t3_enc[stateCopy[2][3]];
-//			columnVector2 = _t0_enc[stateCopy[2][0]] ^ _t1_enc[stateCopy[1][1]] ^ _t2_enc[stateCopy[0][2]] ^ _t3_enc[stateCopy[3][3]];
-//			columnVector3 = _t0_enc[stateCopy[3][0]] ^ _t1_enc[stateCopy[2][1]] ^ _t2_enc[stateCopy[1][2]] ^ _t3_enc[stateCopy[0][3]];
-			
-//			columnVector0 = changeEndianness(columnVector0);
-//			columnVector1 = changeEndianness(columnVector1);
-//			columnVector2 = changeEndianness(columnVector2);
-//			columnVector3 = changeEndianness(columnVector3);
-			
-//			*reinterpret_cast<uint32_t *>(&this->_state[0][0]) = columnVector0;
-//			*reinterpret_cast<uint32_t *>(&this->_state[1][0]) = columnVector1;
-//			*reinterpret_cast<uint32_t *>(&this->_state[2][0]) = columnVector2;
-//			*reinterpret_cast<uint32_t *>(&this->_state[3][0]) = columnVector3;
-			
-//			this->_addRoundKey(round);
 		}
 		
 		this->_subBytes();
@@ -171,7 +160,7 @@ private:
 		}
 	}
 	
-	void _addRoundKey(const uint8_t round)
+	inline void _addRoundKey(const uint8_t round)
 	{
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
@@ -323,10 +312,10 @@ private:
 	}
 };
 
-using Block128 = PrimitiveBlock<AES_128_KEY_SIZE>;
-using Block192 = PrimitiveBlock<AES_192_KEY_SIZE>;
-using Block256 = PrimitiveBlock<AES_256_KEY_SIZE>;
+using Block128 = Block<AES_128_KEY_SIZE>;
+using Block192 = Block<AES_192_KEY_SIZE>;
+using Block256 = Block<AES_256_KEY_SIZE>;
 
 } // namespace Aes
 
-#endif // PRIMITIVEBLOCK_H
+#endif // BLOCK_H
