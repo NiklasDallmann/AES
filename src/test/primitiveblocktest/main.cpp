@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "block.h"
+#include "ctr.h"
 #include "utilities.h"
 
 #define SUCCESS(text) \
@@ -16,7 +17,7 @@
 	std::cout << "[\x1B[34mBENCHMARK\x1B[0m]	" << text << std::endl;
 
 template <typename Function>
-void benchmark(Function f, const std::string &tag, size_t numberOfCycles)
+void benchmark(Function f, const std::string &tag, size_t numberOfCycles, size_t dataSize = AES_BLOCK_SIZE)
 {
 	auto startTimePoint = std::chrono::high_resolution_clock::now();
 	
@@ -31,9 +32,8 @@ void benchmark(Function f, const std::string &tag, size_t numberOfCycles)
 	double millisecondsPerCycle = (millisecondsTaken / double(numberOfCycles));
 	double secondsPerCycle = millisecondsPerCycle / double(1000);
 	double bandwidth = 0;
-	uint64_t dataSize = AES_BLOCK_SIZE;
 	
-	bandwidth = (double(dataSize) / double(1000000) / secondsPerCycle);
+	bandwidth = (double(dataSize * sizeof (uint32_t)) / double(1000000) / secondsPerCycle);
 	
 	BENCHMARK(tag << "	" << millisecondsPerCycle << " ms/cycle	" << bandwidth << " MB/s")
 }
@@ -89,7 +89,67 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 5000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-128 Encryption", 10000000);
+	};
+	
+	auto aes128CtrTest = []()
+	{
+		uint8_t plaintext[] = {
+			0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93, 0x17, 0x2a,
+			0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51,
+			0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11, 0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef,
+			0xf6, 0x9f, 0x24, 0x45, 0xdf, 0x4f, 0x9b, 0x17, 0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10
+		};
+		
+		uint8_t key[] {
+			0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+		};
+		
+		uint8_t initializationVector[] {
+			0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff			
+		};
+		
+		uint8_t expectedCiphertext[] {
+			0x87, 0x4d, 0x61, 0x91, 0xb6, 0x20, 0xe3, 0x26, 0x1b, 0xef, 0x68, 0x64, 0x99, 0x0d, 0xb6, 0xce,
+			0x98, 0x06, 0xf6, 0x6b, 0x79, 0x70, 0xfd, 0xff, 0x86, 0x17, 0x18, 0x7b, 0xb9, 0xff, 0xfd, 0xff,
+			0x5a, 0xe4, 0xdf, 0x3e, 0xdb, 0xd5, 0xd3, 0x5e, 0x5b, 0x4f, 0x09, 0x02, 0x0d, 0xb0, 0x3e, 0xab,
+			0x1e, 0x03, 0x1d, 0xda, 0x2f, 0xbe, 0x03, 0xd1, 0x79, 0x21, 0x70, 0xa0, 0xf3, 0x00, 0x9c, 0xee
+		};
+		
+		uint8_t ciphertext[sizeof (plaintext)];
+		uint8_t decryptedPlaintext[sizeof (plaintext)];
+		
+		Aes::Key128 keyObj(key);
+		Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
+		Aes::Mode::Ctr128::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
+		
+		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
+		{
+			SUCCESS("AES-128-CTR Encryption")
+		}
+		else
+		{
+			FAIL("AES-128-CTR Encryption")
+			INFO("RESULT")
+			printBuffer(ciphertext, sizeof (ciphertext));
+			INFO("EXPECTED")
+			printBuffer(expectedCiphertext, sizeof (expectedCiphertext));
+		}
+		
+		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
+		{
+			SUCCESS("AES-128 Decryption")
+		}
+		else
+		{
+			FAIL("AES-128-CTR Decryption")
+			INFO("RESULT")
+			printBuffer(decryptedPlaintext, sizeof (decryptedPlaintext));
+			INFO("EXPECTED")
+			printBuffer(plaintext, sizeof (plaintext));
+		}
+		
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext) / sizeof (uint32_t));
 	};
 	
 	auto aes192Test = []()
@@ -141,7 +201,7 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 5000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-192 Encryption", 10000000);
 	};
 	
 	auto aes256Test = []()
@@ -194,15 +254,14 @@ int main()
 			printBuffer(plaintext, AES_BLOCK_SIZE * 4);
 		}
 		
-		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 5000000);
+		benchmark([&block, &plaintext, &ciphertext](){block.encrypt(plaintext, ciphertext);}, "AES-256 Encryption", 10000000);
 	};
 	
 	// Run tests
-//	aes128Test();
-//	aes192Test();
-//	aes256Test();
-	
-	generateTTable();
+	aes128Test();
+	aes128CtrTest();
+	aes192Test();
+	aes256Test();
 	
 	return 0;
 }

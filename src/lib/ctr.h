@@ -16,52 +16,81 @@ namespace Aes::Mode
 template <uint8_t keySize>
 class Ctr
 {
+public:
 	Ctr() = delete;
 	~Ctr() = delete;
 	
-	static void encrypt(const Key<keySize> &key, const uint8_t *plaintext, const size_t size, uint8_t **ciphertext)
+	static void encrypt(const Key<keySize> &key, const uint8_t *initializationVector, const uint8_t *plaintext, const size_t size, uint8_t *ciphertext)
 	{
 		Block<keySize> block(key);
 		
 		// Calculate block count
 		uint64_t blockCount = calculateBlockCount(size);
 		
-		// Allocate storage for ciphertext
-		*ciphertext = new uint8_t[blockCount * AES_BLOCK_SIZE];
-		
-		// Iterate through blocks and encrypt plaintext
-		for (uint64_t blockIndex = 0; blockIndex < blockCount; blockIndex++)
+		// Iterate through the first n-1 blocks and encrypt plaintext
+//#pragma omp parallel for
+		for (uint64_t blockIndex = 0; blockIndex < blockCount - 1; blockIndex++)
 		{
-			uint8_t outputBlock[AES_BLOCK_SIZE];
-			uint8_t plainBlock[AES_BLOCK_SIZE];
-			uint8_t counter[AES_BLOCK_SIZE];
+			Block<keySize> localBlock = block;
+			uint8_t outputBlock[AES_BLOCK_SIZE * sizeof (uint32_t)];
+			uint8_t plainBlock[AES_BLOCK_SIZE * sizeof (uint32_t)];
+			uint8_t counter[AES_BLOCK_SIZE * sizeof (uint32_t)];
 			
-			*reinterpret_cast<uint64_t *>(counter) = blockIndex;
-			memcpy(plainBlock, plaintext + blockIndex * sizeof (uint32_t), AES_BLOCK_SIZE * sizeof (uint32_t));
+			// Copy current plaintext block
+			memcpy(plainBlock, plaintext + blockIndex * sizeof (plainBlock), sizeof (plainBlock));
 			
+			// Copy initialization vector in counter
+			memcpy(counter, initializationVector, (AES_BLOCK_SIZE * sizeof (uint32_t)));
+			
+			// Set lower half of counter with block index, i.e. the actual counter
+			*(reinterpret_cast<uint64_t *>(counter) + 1) = changeEndianness(changeEndianness(*(reinterpret_cast<uint64_t *>(counter) + 1)) + blockIndex);
+			
+			// Encrypt counter
 			block.encrypt(counter, outputBlock);
 			
-			
+			// XOR output block with plain block and write to ciphertext
+			for (uint8_t byte = 0; byte < sizeof (plainBlock); byte++)
+			{
+				ciphertext[byte + sizeof (plainBlock) * blockIndex] = plainBlock[byte] ^ outputBlock[byte];
+			}
+		}
+		
+		// Encrypt last possibly incomplete block
+		Block<keySize> localBlock = block;
+		uint8_t outputBlock[AES_BLOCK_SIZE * sizeof (uint32_t)];
+		uint8_t plainBlock[AES_BLOCK_SIZE * sizeof (uint32_t)];
+		uint8_t counter[AES_BLOCK_SIZE * sizeof (uint32_t)];
+		
+		// Copy current plaintext block
+		memcpy(plainBlock, plaintext + (blockCount - 1) * sizeof (plainBlock), sizeof (plainBlock));
+		
+		// Copy initialization vector in counter
+		memcpy(counter, initializationVector, (AES_BLOCK_SIZE * sizeof (uint32_t)));
+		
+		// Set lower half of counter with block index, i.e. the actual counter
+		*(reinterpret_cast<uint64_t *>(counter) + 1) = changeEndianness(changeEndianness(*(reinterpret_cast<uint64_t *>(counter) + 1)) + (blockCount - 1));
+		
+		// Encrypt counter
+		block.encrypt(counter, outputBlock);
+		
+		// XOR output block with plain block and write to ciphertext
+		uint8_t remainingBytes = uint8_t(size - (sizeof (plainBlock) * (blockCount - 1)));
+		for (uint8_t byte = 0; byte < remainingBytes; byte++)
+		{
+			ciphertext[byte + sizeof (plainBlock) * (blockCount - 1)] = plainBlock[byte] ^ outputBlock[byte];
 		}
 	}
 	
-	static void decrypt(const Key<keySize> &key, const uint8_t *ciphertext, const size_t size, uint8_t **plaintext)
+	static void decrypt(const Key<keySize> &key, const uint8_t *initializationVector, const uint8_t *ciphertext, const size_t size, uint8_t *plaintext)
 	{
-		Block<keySize> block(key);
-		
-		// Calculate block count
-		uint64_t blockCount = calculateBlockCount(size);
-		
-		// Allocate storage for plaintext
-		*plaintext = new uint8_t[blockCount * AES_BLOCK_SIZE];
-		
-		// Iterate through blocks and decrypt ciphertext
-		for (size_t blockIndex = 0; blockIndex < blockCount; blockIndex++)
-		{
-			block.decrypt(ciphertext + AES_BLOCK_SIZE * sizeof (uint32_t), *plaintext + AES_BLOCK_SIZE * sizeof (uint32_t));
-		}
+		// CTR mode uses encryption for decryption
+		encrypt(key, initializationVector, ciphertext, size, plaintext);
 	}
 };
+
+using Ctr128 = Ctr<AES_128_KEY_SIZE>;
+using Ctr192 = Ctr<AES_192_KEY_SIZE>;
+using Ctr256 = Ctr<AES_256_KEY_SIZE>;
 
 } // namespace Aes::Mode
 

@@ -30,7 +30,6 @@ public:
 	~Block()
 	{
 		safeSetZero(this->_expandedKey, sizeof (this->_expandedKey));
-		safeSetZero(this->_state, AES_BLOCK_SIZE * AES_BLOCK_SIZE * sizeof (uint8_t));
 	}
 	
 	void encrypt(const uint8_t *plainBlock, uint8_t *cipherBlock)
@@ -56,11 +55,6 @@ public:
 		s2 ^= this->_expandedKey[k + 2];
 		s3 ^= this->_expandedKey[k + 3];
 		k += 4;
-		
-		*reinterpret_cast<uint32_t *>(&this->_state[0][0]) = changeEndianness(s0);
-		*reinterpret_cast<uint32_t *>(&this->_state[1][0]) = changeEndianness(s1);
-		*reinterpret_cast<uint32_t *>(&this->_state[2][0]) = changeEndianness(s2);
-		*reinterpret_cast<uint32_t *>(&this->_state[3][0]) = changeEndianness(s3);
 		
 		// Perform transformation on middle rounds
 		for (uint8_t round = 1; round < KeySizeType<keySize>::rounds; round++)
@@ -97,43 +91,48 @@ public:
 	
 	void decrypt(const uint8_t *cipherBlock, uint8_t *plainBlock)
 	{
+		alignas(uint32_t) StateType state;
+		
 		// Copy plain text into state
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
-				this->_state[column][row] = *cipherBlock;
+				state[column][row] = *cipherBlock;
 				cipherBlock++;
 			}
 		}
 		
-		this->_addRoundKey(KeySizeType<keySize>::rounds);
+		this->_addRoundKey(state, KeySizeType<keySize>::rounds);
 		
 		for (uint8_t round = KeySizeType<keySize>::rounds - 1; round > 0; round--)
 		{
-			this->_inverseShiftRows();
-			this->_inverseSubBytes();
-			this->_addRoundKey(round);
-			this->_inverseMixCollumns();
+			this->_inverseShiftRows(state);
+			this->_inverseSubBytes(state);
+			this->_addRoundKey(state, round);
+			this->_inverseMixCollumns(state);
 		}
 		
-		this->_inverseShiftRows();
-		this->_inverseSubBytes();
-		this->_addRoundKey(0);
+		this->_inverseShiftRows(state);
+		this->_inverseSubBytes(state);
+		this->_addRoundKey(state, 0);
 		
 		// Write state into cipher text
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
-				*plainBlock = this->_state[column][row];
+				*plainBlock = state[column][row];
 				plainBlock++;
 			}
 		}
+		
+		safeSetZero(state, AES_BLOCK_SIZE * AES_BLOCK_SIZE * sizeof (uint8_t));
 	}
 	
 private:
-	alignas(uint32_t) uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
+	using StateType = uint8_t [AES_BLOCK_SIZE][AES_BLOCK_SIZE];
+//	alignas(uint32_t) uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 	
 	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)];
 	
@@ -163,16 +162,16 @@ private:
 		}
 	}
 	
-	inline void _addRoundKey(const uint8_t round)
+	inline void _addRoundKey(StateType &state, const uint8_t round)
 	{
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
-			uint32_t roundKey = *reinterpret_cast<uint32_t *>(this->_state[column]);
+			uint32_t roundKey = *reinterpret_cast<uint32_t *>(state[column]);
 			
 			roundKey ^= changeEndianness(this->_expandedKey[round * AES_BLOCK_SIZE + column]);
 			
 			// Write back word
-			*reinterpret_cast<uint32_t *>(this->_state[column]) = roundKey;
+			*reinterpret_cast<uint32_t *>(state[column]) = roundKey;
 		}
 	}
 	
@@ -183,114 +182,114 @@ private:
 		return uint8_t((value << uint8_t(1)) ^ ((value >> uint8_t(7) & uint8_t(1)) * uint8_t(0x1b)));
 	}
 	
-	void _mixCollumns()
+	void _mixCollumns(StateType &state)
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
-			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
+			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
 			
-			this->_state[column][0] = word[2] ^ word[3] ^ galoisMultiply_2[word[0]] ^ galoisMultiply_3[word[1]];
-			this->_state[column][1] = word[0] ^ word[3] ^ galoisMultiply_2[word[1]] ^ galoisMultiply_3[word[2]];
-			this->_state[column][2] = word[0] ^ word[1] ^ galoisMultiply_2[word[2]] ^ galoisMultiply_3[word[3]];
-			this->_state[column][3] = word[1] ^ word[2] ^ galoisMultiply_2[word[3]] ^ galoisMultiply_3[word[0]];
+			state[column][0] = word[2] ^ word[3] ^ galoisMultiply_2[word[0]] ^ galoisMultiply_3[word[1]];
+			state[column][1] = word[0] ^ word[3] ^ galoisMultiply_2[word[1]] ^ galoisMultiply_3[word[2]];
+			state[column][2] = word[0] ^ word[1] ^ galoisMultiply_2[word[2]] ^ galoisMultiply_3[word[3]];
+			state[column][3] = word[1] ^ word[2] ^ galoisMultiply_2[word[3]] ^ galoisMultiply_3[word[0]];
 		}
 	}
 	
-	void _inverseMixCollumns()
+	void _inverseMixCollumns(StateType &state)
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
-			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&this->_state[column]);
+			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
 			
-			this->_state[column][0] = galoisMultiply_9[word[3]] ^ galoisMultiply_b[word[1]] ^ galoisMultiply_d[word[2]] ^ galoisMultiply_e[word[0]];
-			this->_state[column][1] = galoisMultiply_9[word[0]] ^ galoisMultiply_b[word[2]] ^ galoisMultiply_d[word[3]] ^ galoisMultiply_e[word[1]];
-			this->_state[column][2] = galoisMultiply_9[word[1]] ^ galoisMultiply_b[word[3]] ^ galoisMultiply_d[word[0]] ^ galoisMultiply_e[word[2]];
-			this->_state[column][3] = galoisMultiply_9[word[2]] ^ galoisMultiply_b[word[0]] ^ galoisMultiply_d[word[1]] ^ galoisMultiply_e[word[3]];
+			state[column][0] = galoisMultiply_9[word[3]] ^ galoisMultiply_b[word[1]] ^ galoisMultiply_d[word[2]] ^ galoisMultiply_e[word[0]];
+			state[column][1] = galoisMultiply_9[word[0]] ^ galoisMultiply_b[word[2]] ^ galoisMultiply_d[word[3]] ^ galoisMultiply_e[word[1]];
+			state[column][2] = galoisMultiply_9[word[1]] ^ galoisMultiply_b[word[3]] ^ galoisMultiply_d[word[0]] ^ galoisMultiply_e[word[2]];
+			state[column][3] = galoisMultiply_9[word[2]] ^ galoisMultiply_b[word[0]] ^ galoisMultiply_d[word[1]] ^ galoisMultiply_e[word[3]];
 		}
 	}
 	
-	void _shiftRows()
+	void _shiftRows(StateType &state)
 	{
 		uint8_t tmp = 0;
 		
 		// Row 1
-		tmp = this->_state[0][1];
-		this->_state[0][1] = this->_state[1][1];
-		this->_state[1][1] = this->_state[2][1];
-		this->_state[2][1] = this->_state[3][1];
-		this->_state[3][1] = tmp;
+		tmp = state[0][1];
+		state[0][1] = state[1][1];
+		state[1][1] = state[2][1];
+		state[2][1] = state[3][1];
+		state[3][1] = tmp;
 		
 		// Row 2
-		tmp = this->_state[0][2];
-		this->_state[0][2] = this->_state[2][2];
-		this->_state[2][2] = tmp;
+		tmp = state[0][2];
+		state[0][2] = state[2][2];
+		state[2][2] = tmp;
 		
-		tmp = this->_state[1][2];
-		this->_state[1][2] = this->_state[3][2];
-		this->_state[3][2] = tmp;
+		tmp = state[1][2];
+		state[1][2] = state[3][2];
+		state[3][2] = tmp;
 		
 		// Row 3
-		tmp = this->_state[0][3];
-		this->_state[0][3] = this->_state[3][3];
-		this->_state[3][3] = this->_state[2][3];
-		this->_state[2][3] = this->_state[1][3];
-		this->_state[1][3] = tmp;
+		tmp = state[0][3];
+		state[0][3] = state[3][3];
+		state[3][3] = state[2][3];
+		state[2][3] = state[1][3];
+		state[1][3] = tmp;
 	}
 	
-	void _inverseShiftRows()
+	void _inverseShiftRows(StateType &state)
 	{
 		uint8_t tmp = 0;
 		
 		// Row 1
-		tmp = this->_state[0][1];
-		this->_state[0][1] = this->_state[3][1];
-		this->_state[3][1] = this->_state[2][1];
-		this->_state[2][1] = this->_state[1][1];
-		this->_state[1][1] = tmp;
+		tmp = state[0][1];
+		state[0][1] = state[3][1];
+		state[3][1] = state[2][1];
+		state[2][1] = state[1][1];
+		state[1][1] = tmp;
 		
 		// Row 2
-		tmp = this->_state[0][2];
-		this->_state[0][2] = this->_state[2][2];
-		this->_state[2][2] = tmp;
+		tmp = state[0][2];
+		state[0][2] = state[2][2];
+		state[2][2] = tmp;
 		
-		tmp = this->_state[1][2];
-		this->_state[1][2] = this->_state[3][2];
-		this->_state[3][2] = tmp;
+		tmp = state[1][2];
+		state[1][2] = state[3][2];
+		state[3][2] = tmp;
 		
 		// Row 3
-		tmp = this->_state[0][3];
-		this->_state[0][3] = this->_state[1][3];
-		this->_state[1][3] = this->_state[2][3];
-		this->_state[2][3] = this->_state[3][3];
-		this->_state[3][3] = tmp;
+		tmp = state[0][3];
+		state[0][3] = state[1][3];
+		state[1][3] = state[2][3];
+		state[2][3] = state[3][3];
+		state[3][3] = tmp;
 	}
 	
-	void _subBytes()
+	void _subBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
-				this->_state[column][row] = sBox_enc[this->_state[column][row]];
+				state[column][row] = sBox_enc[state[column][row]];
 			}
 		}
 	}
 	
-	void _inverseSubBytes()
+	void _inverseSubBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
 		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
 		{
 			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
 			{
-				this->_state[column][row] = sBox_dec[this->_state[column][row]];
+				state[column][row] = sBox_dec[state[column][row]];
 			}
 		}
 	}
