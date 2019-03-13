@@ -57,7 +57,7 @@ public:
 		k += 4;
 		
 		// Perform transformation on middle rounds
-		for (uint8_t round = 1; round < KeySizeType<keySize>::rounds; round++)
+		for (uint8_t round = 1; round < KeyTraits<keySize>::rounds; round++)
 		{
 			t0 = t0_enc[uint8_t(s0 >> 24)] ^ t1_enc[uint8_t(s1 >> 16)] ^ t2_enc[uint8_t(s2 >> 8)] ^ t3_enc[uint8_t(s3)] ^ this->_expandedKey[k + 0];
 			t1 = t0_enc[uint8_t(s1 >> 24)] ^ t1_enc[uint8_t(s2 >> 16)] ^ t2_enc[uint8_t(s3 >> 8)] ^ t3_enc[uint8_t(s0)] ^ this->_expandedKey[k + 1];
@@ -103,9 +103,9 @@ public:
 			}
 		}
 		
-		this->_addRoundKey(state, KeySizeType<keySize>::rounds);
+		this->_addRoundKey(state, KeyTraits<keySize>::rounds);
 		
-		for (uint8_t round = KeySizeType<keySize>::rounds - 1; round > 0; round--)
+		for (uint8_t round = KeyTraits<keySize>::rounds - 1; round > 0; round--)
 		{
 			this->_inverseShiftRows(state);
 			this->_inverseSubBytes(state);
@@ -133,31 +133,31 @@ public:
 private:
 	using StateType = uint8_t [AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 	
-	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)];
+	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeyTraits<keySize>::rounds + 1)];
 	
 	void _expandKey(const uint8_t *key)
 	{
 		uint32_t tmp = 0;
 		
-		for (uint8_t column = 0; column < KeySizeType<keySize>::value; column++)
+		for (uint8_t column = 0; column < KeyTraits<keySize>::size; column++)
 		{
 			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]);
 		}
 		
-		for (uint8_t column = KeySizeType<keySize>::value; column < (AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)); column++)
+		for (uint8_t column = KeyTraits<keySize>::size; column < (AES_BLOCK_SIZE * (KeyTraits<keySize>::rounds + 1)); column++)
 		{
 			tmp = _expandedKey[column - 1];
 			
-			if ((column % KeySizeType<keySize>::value) == 0)
+			if ((column % KeyTraits<keySize>::size) == 0)
 			{
-				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / KeySizeType<keySize>::value] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / KeyTraits<keySize>::size] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
 			}
-			else if ((KeySizeType<keySize>::value > 6) & ((column % KeySizeType<keySize>::value) == 4))
+			else if ((KeyTraits<keySize>::size > 6) & ((column % KeyTraits<keySize>::size) == 4))
 			{
 				tmp = this->_subWord(tmp);
 			}
 			
-			this->_expandedKey[column] = this->_expandedKey[column - KeySizeType<keySize>::value] ^ tmp;
+			this->_expandedKey[column] = this->_expandedKey[column - KeyTraits<keySize>::size] ^ tmp;
 		}
 	}
 	

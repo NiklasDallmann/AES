@@ -12,26 +12,26 @@ namespace Aes
 {
 
 template <uint8_t keySize>
-struct KeySizeType;
+struct KeyTraits;
 
 template <>
-struct KeySizeType<AES_128_KEY_SIZE>
+struct KeyTraits<AES_128_KEY_SIZE>
 {
-	static constexpr uint8_t value = AES_128_KEY_SIZE;
+	static constexpr uint8_t size = AES_128_KEY_SIZE;
 	static constexpr uint8_t rounds = AES_128_ROUND_COUNT;
 };
 
 template <>
-struct KeySizeType<AES_192_KEY_SIZE>
+struct KeyTraits<AES_192_KEY_SIZE>
 {
-	static constexpr uint8_t value = AES_192_KEY_SIZE;
+	static constexpr uint8_t size = AES_192_KEY_SIZE;
 	static constexpr uint8_t rounds = AES_192_ROUND_COUNT;
 };
 
 template <>
-struct KeySizeType<AES_256_KEY_SIZE>
+struct KeyTraits<AES_256_KEY_SIZE>
 {
-	static constexpr uint8_t value = AES_256_KEY_SIZE;
+	static constexpr uint8_t size = AES_256_KEY_SIZE;
 	static constexpr uint8_t rounds = AES_256_ROUND_COUNT;
 };
 
@@ -39,7 +39,7 @@ template <uint8_t keySize>
 class Key
 {
 public:
-	using key_size_type = KeySizeType<keySize>;
+	using key_size_type = KeyTraits<keySize>;
 	
 	Key() = default;
 	
@@ -65,7 +65,7 @@ public:
 		return *this;
 	}
 	
-	uint8_t key[KeySizeType<keySize>::value * sizeof (uint32_t)];
+	uint8_t key[KeyTraits<keySize>::size * sizeof (uint32_t)];
 };
 
 using Key128 = Key<AES_128_KEY_SIZE>;
