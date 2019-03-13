@@ -154,7 +154,7 @@ int main()
 	
 	auto aes128CtrBenchmark = []()
 	{
-		uint8_t plaintext[8192];
+		uint8_t plaintext[22000];
 		
 		// Generate plaintext
 		for (uint32_t byte = 0; byte < sizeof (plaintext); byte++)
@@ -186,7 +186,7 @@ int main()
 			FAIL("AES-128-CTR")
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 10000, sizeof (plaintext) / sizeof (uint32_t));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext) / sizeof (uint32_t));
 	};
 	
 	auto aes192Test = []()
