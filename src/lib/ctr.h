@@ -28,7 +28,7 @@ public:
 		uint64_t blockCount = calculateBlockCount(size);
 		
 		// Iterate through the first n-1 blocks and encrypt plaintext
-//#pragma omp parallel for
+#pragma omp parallel for schedule(static, 4)
 		for (uint64_t blockIndex = 0; blockIndex < blockCount - 1; blockIndex++)
 		{
 			Block<keySize> localBlock = block;

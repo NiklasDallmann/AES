@@ -132,7 +132,6 @@ public:
 	
 private:
 	using StateType = uint8_t [AES_BLOCK_SIZE][AES_BLOCK_SIZE];
-//	alignas(uint32_t) uint8_t _state[AES_BLOCK_SIZE][AES_BLOCK_SIZE];
 	
 	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeySizeType<keySize>::rounds + 1)];
 	

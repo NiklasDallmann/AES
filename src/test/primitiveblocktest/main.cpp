@@ -152,6 +152,43 @@ int main()
 		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext) / sizeof (uint32_t));
 	};
 	
+	auto aes128CtrBenchmark = []()
+	{
+		uint8_t plaintext[8192];
+		
+		// Generate plaintext
+		for (uint32_t byte = 0; byte < sizeof (plaintext); byte++)
+		{
+			plaintext[byte] = uint8_t(byte);
+		}
+		
+		uint8_t key[] {
+			0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+		};
+		
+		uint8_t initializationVector[] {
+			0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff			
+		};
+		
+		uint8_t ciphertext[sizeof (plaintext)];
+		uint8_t decryptedPlaintext[sizeof (plaintext)];
+		
+		Aes::Key128 keyObj(key);
+		Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
+		Aes::Mode::Ctr128::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
+		
+		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
+		{
+			SUCCESS("AES-128-CTR")
+		}
+		else
+		{
+			FAIL("AES-128-CTR")
+		}
+		
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 10000, sizeof (plaintext) / sizeof (uint32_t));
+	};
+	
 	auto aes192Test = []()
 	{
 		uint8_t plaintext[] = {
@@ -260,6 +297,7 @@ int main()
 	// Run tests
 	aes128Test();
 	aes128CtrTest();
+	aes128CtrBenchmark();
 	aes192Test();
 	aes256Test();
 	
