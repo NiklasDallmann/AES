@@ -33,7 +33,7 @@ void benchmark(Function f, const std::string &tag, size_t numberOfCycles, size_t
 	double secondsPerCycle = millisecondsPerCycle / double(1000);
 	double bandwidth = 0;
 	
-	bandwidth = (double(dataSize * sizeof (uint32_t)) / double(1000000) / secondsPerCycle);
+	bandwidth = (double(dataSize) / double(1000000) / secondsPerCycle);
 	
 	BENCHMARK(tag << "	" << millisecondsPerCycle << " ms/cycle	" << bandwidth << " MB/s")
 }
@@ -149,7 +149,7 @@ int main()
 			printBuffer(plaintext, sizeof (plaintext));
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext) / sizeof (uint32_t));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext));
 	};
 	
 	auto aes128CtrBenchmark = []()
@@ -186,7 +186,7 @@ int main()
 			FAIL("AES-128-CTR")
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext) / sizeof (uint32_t));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext));
 	};
 	
 	auto aes192Test = []()

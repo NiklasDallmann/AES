@@ -10,9 +10,9 @@ namespace Crypto::Mode
 template <typename BlockType>
 static inline size_t calculateBlockCount(const size_t size)
 {
-	size_t returnValue = (size / (BlockType::TraitsType::keySize * sizeof (uint32_t)));
+	size_t returnValue = (size / BlockType::TraitsType::keySize);
 	
-	if (size % (BlockType::TraitsType::keySize * sizeof (uint32_t)) != 0)
+	if (size % (BlockType::TraitsType::keySize) != 0)
 	{
 		returnValue++;
 	}

@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#define AES_BLOCK_SIZE			4
-#define AES_128_KEY_SIZE		4
-#define AES_192_KEY_SIZE		6
-#define AES_256_KEY_SIZE		8
+#define AES_BLOCK_SIZE			4 * sizeof (uint32_t)
+#define AES_128_KEY_SIZE		4 * sizeof (uint32_t)
+#define AES_192_KEY_SIZE		6 * sizeof (uint32_t)
+#define AES_256_KEY_SIZE		8 * sizeof (uint32_t)
 #define AES_128_ROUND_COUNT		10
 #define AES_192_ROUND_COUNT		12
 #define AES_256_ROUND_COUNT		14

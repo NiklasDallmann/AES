@@ -70,7 +70,7 @@ public:
 	{
 		this->_expandKey(key);
 		
-		safeSetZero(key, keySize * sizeof (uint32_t));
+		safeSetZero(key, keySize);
 	}
 	
 	///
@@ -161,9 +161,9 @@ public:
 		alignas(uint32_t) StateType state;
 		
 		// Copy plain text into state
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
-			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
+			for (uint8_t row = 0; row < blockSizeWords; row++)
 			{
 				state[column][row] = *cipherBlock;
 				cipherBlock++;
@@ -185,56 +185,59 @@ public:
 		this->_addRoundKey(state, 0);
 		
 		// Write state into cipher text
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
-			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
+			for (uint8_t row = 0; row < blockSizeWords; row++)
 			{
 				*plainBlock = state[column][row];
 				plainBlock++;
 			}
 		}
 		
-		safeSetZero(state, TraitsType::blockSize * TraitsType::blockSize * sizeof (uint8_t));
+		safeSetZero(state, blockSizeWords * blockSizeWords * sizeof (uint8_t));
 	}
 	
 private:
-	using StateType = uint8_t [TraitsType::blockSize][TraitsType::blockSize];
+	static constexpr uint8_t blockSizeWords = uint8_t(TraitsType::blockSize / sizeof (uint32_t));
+	static constexpr uint8_t keySizeWords = uint8_t(TraitsType::keySize / sizeof (uint32_t));
 	
-	uint32_t _expandedKey[TraitsType::blockSize * (Traits<keySize>::rounds + 1)];
+	using StateType = uint8_t [blockSizeWords][blockSizeWords];
+	
+	uint32_t _expandedKey[blockSizeWords * (Traits<keySize>::rounds + 1)];
 	
 	void _expandKey(const uint8_t *key)
 	{
 		uint32_t tmp = 0;
 		
-		for (uint8_t column = 0; column < Traits<keySize>::keySize; column++)
+		for (uint8_t column = 0; column < keySizeWords; column++)
 		{
 			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]);
 		}
 		
-		for (uint8_t column = Traits<keySize>::keySize; column < (TraitsType::blockSize * (Traits<keySize>::rounds + 1)); column++)
+		for (uint8_t column = keySizeWords; column < (blockSizeWords * (Traits<keySize>::rounds + 1)); column++)
 		{
 			tmp = _expandedKey[column - 1];
 			
-			if ((column % Traits<keySize>::keySize) == 0)
+			if ((column % keySizeWords) == 0)
 			{
-				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / Traits<keySize>::keySize] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / keySizeWords] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
 			}
-			else if ((Traits<keySize>::keySize > 6) & ((column % Traits<keySize>::keySize) == 4))
+			else if ((keySizeWords > 6) & ((column % keySizeWords) == 4))
 			{
 				tmp = this->_subWord(tmp);
 			}
 			
-			this->_expandedKey[column] = this->_expandedKey[column - Traits<keySize>::keySize] ^ tmp;
+			this->_expandedKey[column] = this->_expandedKey[column - keySizeWords] ^ tmp;
 		}
 	}
 	
 	inline void _addRoundKey(StateType &state, const uint8_t round)
 	{
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
 			uint32_t roundKey = *reinterpret_cast<uint32_t *>(state[column]);
 			
-			roundKey ^= changeEndianness(this->_expandedKey[round * TraitsType::blockSize + column]);
+			roundKey ^= changeEndianness(this->_expandedKey[round * blockSizeWords + column]);
 			
 			// Write back word
 			*reinterpret_cast<uint32_t *>(state[column]) = roundKey;
@@ -252,7 +255,7 @@ private:
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
@@ -268,7 +271,7 @@ private:
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
@@ -339,9 +342,9 @@ private:
 	void _subBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
-			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
+			for (uint8_t row = 0; row < blockSizeWords; row++)
 			{
 				state[column][row] = sBox_enc[state[column][row]];
 			}
@@ -351,9 +354,9 @@ private:
 	void _inverseSubBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
+		for (uint8_t column = 0; column < blockSizeWords; column++)
 		{
-			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
+			for (uint8_t row = 0; row < blockSizeWords; row++)
 			{
 				state[column][row] = sBox_dec[state[column][row]];
 			}

@@ -12,6 +12,8 @@
 #include <iomanip>
 #include <stdint.h>
 
+#include "cryptoglobals.h"
+
 static inline void printBuffer(const uint8_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)

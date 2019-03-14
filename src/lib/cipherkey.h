@@ -19,7 +19,7 @@ public:
 	
 	Key(uint8_t *key)
 	{
-		memcpy(this->key, key, keySize * sizeof (uint32_t));
+		memcpy(this->key, key, keySize);
 	}
 	
 	Key(const Key &other)
@@ -29,17 +29,17 @@ public:
 	
 	~Key()
 	{
-		safeSetZero(this->key, keySize * sizeof (uint32_t));
+		safeSetZero(this->key, keySize);
 	}
 	
 	Key &operator=(const Key &other)
 	{
-		memcpy(this->key, other.key, keySize * sizeof (uint32_t));
+		memcpy(this->key, other.key, keySize);
 		
 		return *this;
 	}
 	
-	uint8_t key[keySize * sizeof (uint32_t)];
+	uint8_t key[keySize];
 };
 
 } // namespace Crypto

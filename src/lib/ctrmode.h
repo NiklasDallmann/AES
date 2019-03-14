@@ -42,15 +42,15 @@ public:
 		for (uint64_t blockIndex = 0; blockIndex < blockCount - 1; blockIndex++)
 		{
 			BlockType localBlock = block;
-			uint8_t outputBlock[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
-			uint8_t plainBlock[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
-			uint8_t counter[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
+			uint8_t outputBlock[BlockType::TraitsType::blockSize];
+			uint8_t plainBlock[BlockType::TraitsType::blockSize];
+			uint8_t counter[BlockType::TraitsType::blockSize];
 			
 			// Copy current plaintext block
 			memcpy(plainBlock, plaintext + blockIndex * sizeof (plainBlock), sizeof (plainBlock));
 			
 			// Copy initialization vector in counter
-			memcpy(counter, initializationVector, (BlockType::TraitsType::blockSize * sizeof (uint32_t)));
+			memcpy(counter, initializationVector, (BlockType::TraitsType::blockSize));
 			
 			// Set lower half of counter with block index, i.e. the actual counter
 			*(reinterpret_cast<uint64_t *>(counter) + 1) = changeEndianness(changeEndianness(*(reinterpret_cast<uint64_t *>(counter) + 1)) + blockIndex);
@@ -67,15 +67,15 @@ public:
 		
 		// Encrypt last possibly incomplete block
 		BlockType localBlock = block;
-		uint8_t outputBlock[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
-		uint8_t plainBlock[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
-		uint8_t counter[BlockType::TraitsType::blockSize * sizeof (uint32_t)];
+		uint8_t outputBlock[BlockType::TraitsType::blockSize];
+		uint8_t plainBlock[BlockType::TraitsType::blockSize];
+		uint8_t counter[BlockType::TraitsType::blockSize];
 		
 		// Copy current plaintext block
 		memcpy(plainBlock, plaintext + (blockCount - 1) * sizeof (plainBlock), sizeof (plainBlock));
 		
 		// Copy initialization vector in counter
-		memcpy(counter, initializationVector, (BlockType::TraitsType::blockSize * sizeof (uint32_t)));
+		memcpy(counter, initializationVector, BlockType::TraitsType::blockSize);
 		
 		// Set lower half of counter with block index, i.e. the actual counter
 		*(reinterpret_cast<uint64_t *>(counter) + 1) = changeEndianness(changeEndianness(*(reinterpret_cast<uint64_t *>(counter) + 1)) + (blockCount - 1));
