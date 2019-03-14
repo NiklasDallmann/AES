@@ -69,10 +69,10 @@ void generateTTable()
 		// Generate table entry
 		uint8_t *ptr = reinterpret_cast<uint8_t *>(&word);
 		
-		ptr[0] = Crypto::Aes::galoisMultiply_9[Crypto::Aes::sBox_dec[a]];
-		ptr[1] = Crypto::Aes::galoisMultiply_d[Crypto::Aes::sBox_dec[a]];
-		ptr[2] = Crypto::Aes::galoisMultiply_b[Crypto::Aes::sBox_dec[a]];
-		ptr[3] = Crypto::Aes::galoisMultiply_e[Crypto::Aes::sBox_dec[a]];
+		ptr[0] = Crypto::BlockCipher::Aes::galoisMultiply_9[Crypto::BlockCipher::Aes::sBox_dec[a]];
+		ptr[1] = Crypto::BlockCipher::Aes::galoisMultiply_d[Crypto::BlockCipher::Aes::sBox_dec[a]];
+		ptr[2] = Crypto::BlockCipher::Aes::galoisMultiply_b[Crypto::BlockCipher::Aes::sBox_dec[a]];
+		ptr[3] = Crypto::BlockCipher::Aes::galoisMultiply_e[Crypto::BlockCipher::Aes::sBox_dec[a]];
 		
 		word = __builtin_bswap32(word);
 		

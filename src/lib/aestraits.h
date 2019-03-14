@@ -5,7 +5,7 @@
 
 #include "aesconstants.h"
 
-namespace Crypto::Aes
+namespace Crypto::BlockCipher::Aes
 {
 
 template <uint8_t keySize>
@@ -35,6 +35,6 @@ struct Traits<AES_256_KEY_SIZE>
 	static constexpr uint8_t rounds = AES_256_ROUND_COUNT;
 };
 
-} // namespace Crypto::Aes
+} // namespace Crypto::BlockCipher::Aes
 
 #endif // AESTRAITS_H

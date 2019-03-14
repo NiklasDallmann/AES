@@ -16,6 +16,9 @@ HEADERS					+= \
     ciphermode.h \
     cryptoutilities.h \
     cipherkey.h \
-    ctrmode.h
+    ctrmode.h \
+    sha2traits.h \
+    sha2.h \
+    sha2constants.h
 
 include($$PWD/../../base_configuration.pri)

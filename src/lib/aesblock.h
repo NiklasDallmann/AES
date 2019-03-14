@@ -9,21 +9,21 @@
 #include "aestraits.h"
 #include "cryptoutilities.h"
 
-namespace Crypto
+namespace Crypto::BlockCipher
 {
 
 using Aes128Key = Key<AES_128_KEY_SIZE>;
 using Aes192Key = Key<AES_192_KEY_SIZE>;
 using Aes256Key = Key<AES_256_KEY_SIZE>;
 
-} // namespace Crypto
+} // namespace Crypto::BlockCipher
 
 ///
 /// \brief	Contains the AES specific implementations.
 /// 
 /// \since	1.0
 ///
-namespace Crypto::Aes
+namespace Crypto::BlockCipher::Aes
 {
 
 ///
@@ -385,6 +385,6 @@ using Block128 = Block<AES_128_KEY_SIZE>;
 using Block192 = Block<AES_192_KEY_SIZE>;
 using Block256 = Block<AES_256_KEY_SIZE>;
 
-} // namespace Crypto::Aes
+} // namespace Crypto::BlockCipher::Aes
 
 #endif // AESBLOCK_H

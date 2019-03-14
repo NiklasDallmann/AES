@@ -5,7 +5,6 @@
 #include <string.h>
 #include <type_traits>
 
-#include "aesconstants.h"
 #include "cryptoglobals.h"
 
 namespace Crypto
