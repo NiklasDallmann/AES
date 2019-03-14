@@ -18,21 +18,54 @@ using Aes256Key = Key<AES_256_KEY_SIZE>;
 
 } // namespace Crypto
 
+///
+/// \brief	Contains the AES specific implementations.
+/// 
+/// \since	1.0
+///
 namespace Crypto::Aes
 {
 
+///
+/// \brief	Implements an AES block dependent on its \a keySize parameter (in words i.e. \c uint32_t).
+/// 
+/// \since	1.0
+///
 template <uint32_t keySize>
 class Block
 {
 public:
+	///
+	/// \brief	A type containing information about the properties of the instantiated type's properties.
+	/// 
+	/// \since	1.0
+	///
 	using TraitsType = Traits<keySize>;
+	
+	///
+	/// \brief	The corresponding key type.
+	/// 
+	/// \since	1.0
+	///
 	using KeyType = Key<keySize>;
 	
+	///
+	/// \brief	Constructs an AES block with the given \a key.
+	/// 
+	/// \since	1.0
+	///
 	explicit Block(const Key<keySize> &key)
 	{
 		this->_expandKey(key.key);
 	}
 	
+	///
+	/// \brief	Constructs an AES block with the given \a key.
+	/// 
+	///			The memory associated with \a key must be of the required key size, The key material is safely discarded after this call.
+	/// 
+	/// \since	1.0
+	///
 	explicit Block(uint8_t *key)
 	{
 		this->_expandKey(key);
@@ -40,11 +73,24 @@ public:
 		safeSetZero(key, keySize * sizeof (uint32_t));
 	}
 	
+	///
+	/// \brief	Destructs the AES block and safely discards the expanded key material.
+	/// 
+	/// \since	1.0
+	///
 	~Block()
 	{
 		safeSetZero(this->_expandedKey, sizeof (this->_expandedKey));
 	}
 	
+	///
+	/// \brief	Encrypts the \a plainBlock of plaintext and stores the ciphertext in \a cipherBlock.
+	/// 
+	/// \warning
+	///			No checks for null pointers or lengths are performed. The correctness of the input must be garuanteed by the caller.
+	/// 
+	/// \since	1.0
+	///
 	void encrypt(const uint8_t *plainBlock, uint8_t *cipherBlock)
 	{
 		// Column vectors
@@ -102,6 +148,14 @@ public:
 		*reinterpret_cast<uint32_t *>(cipherBlock + sizeof (uint32_t) * 3) = changeEndianness(s3);
 	}
 	
+	///
+	/// \brief	Decrypts the \a cipherBlock of ciphertext and stores the plaintext in \a plainBlock.
+	/// 
+	/// \warning
+	///			No checks for null pointers or lengths are performed. The correctness of the input must be garuanteed by the caller.
+	/// 
+	/// \since	1.0
+	///
 	void decrypt(const uint8_t *cipherBlock, uint8_t *plainBlock)
 	{
 		alignas(uint32_t) StateType state;

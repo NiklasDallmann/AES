@@ -8,9 +8,19 @@
 #include "ciphermode.h"
 #include "cryptoutilities.h"
 
+///
+/// \brief	Contains implementations of block cipher modes.
+/// 
+/// \since	1.0
+///
 namespace Crypto::Mode
 {
 
+///
+/// \brief	Implements the counter (CTR) mode for \a BlockType.
+/// 
+/// \since	1.0
+///
 template <typename BlockType>
 class Ctr
 {
