@@ -9,11 +9,13 @@ DESTDIR					= $$PWD/../../target/lib
 SOURCES					+=
 
 HEADERS					+= \
-    utilities.h \
-    key.h \
-    constants.h \
-    block.h \
-    mode.h \
-    ctr.h
+    aesblock.h \
+    aesconstants.h \
+    aestraits.h \
+    cryptoglobals.h \
+    ciphermode.h \
+    cryptoutilities.h \
+    cipherkey.h \
+    ctrmode.h
 
 include($$PWD/../../base_configuration.pri)

@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "block.h"
-#include "ctr.h"
-#include "utilities.h"
+#include "aesblock.h"
+#include "ctrmode.h"
+#include "cryptoutilities.h"
 
 #define SUCCESS(text) \
 	std::cout << "[\x1B[32mSUCCESS\x1B[0m]	" << text << std::endl;
@@ -57,8 +57,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::Key128 keyObj(key);
-		Aes::Block128 block(keyObj);
+		Crypto::Aes128Key keyObj(key);
+		Crypto::Aes::Block128 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
@@ -119,9 +119,9 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::Key128 keyObj(key);
-		Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
-		Aes::Mode::Ctr128::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
+		Crypto::Aes128Key keyObj(key);
+		Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
+		Crypto::Mode::Ctr<Crypto::Aes::Block128>::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
 		{
@@ -149,7 +149,7 @@ int main()
 			printBuffer(plaintext, sizeof (plaintext));
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext) / sizeof (uint32_t));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR Encryption", 100000, sizeof (plaintext) / sizeof (uint32_t));
 	};
 	
 	auto aes128CtrBenchmark = []()
@@ -173,9 +173,9 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::Key128 keyObj(key);
-		Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
-		Aes::Mode::Ctr128::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
+		Crypto::Aes128Key keyObj(key);
+		Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);
+		Crypto::Mode::Ctr<Crypto::Aes::Block128>::decrypt(keyObj, initializationVector, ciphertext, sizeof (ciphertext), decryptedPlaintext);
 		
 		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
 		{
@@ -186,7 +186,7 @@ int main()
 			FAIL("AES-128-CTR")
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Aes::Mode::Ctr128::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext) / sizeof (uint32_t));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext) / sizeof (uint32_t));
 	};
 	
 	auto aes192Test = []()
@@ -206,8 +206,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::Key192 keyObj(key);
-		Aes::Block192 block(keyObj);
+		Crypto::Aes192Key keyObj(key);
+		Crypto::Aes::Block192 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)
@@ -259,8 +259,8 @@ int main()
 		uint8_t ciphertext[sizeof (plaintext)];
 		uint8_t decryptedPlaintext[sizeof (plaintext)];
 		
-		Aes::Key256 keyObj(key);
-		Aes::Block256 block(keyObj);
+		Crypto::Aes256Key keyObj(key);
+		Crypto::Aes::Block256 block(keyObj);
 		block.encrypt(plaintext, ciphertext);
 		
 		if (memcmp(expectedCiphertext, ciphertext, sizeof (expectedCiphertext)) == 0)

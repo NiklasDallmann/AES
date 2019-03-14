@@ -1,20 +1,33 @@
-#ifndef BLOCK_H
-#define BLOCK_H
+#ifndef AESBLOCK_H
+#define AESBLOCK_H
 
 #include <stdint.h>
 #include <string.h>
 
-#include "constants.h"
-#include "key.h"
-#include "utilities.h"
+#include "aesconstants.h"
+#include "cipherkey.h"
+#include "aestraits.h"
+#include "cryptoutilities.h"
 
-namespace Aes
+namespace Crypto
 {
 
-template <uint8_t keySize>
+using Aes128Key = Key<AES_128_KEY_SIZE>;
+using Aes192Key = Key<AES_192_KEY_SIZE>;
+using Aes256Key = Key<AES_256_KEY_SIZE>;
+
+} // namespace Crypto
+
+namespace Crypto::Aes
+{
+
+template <uint32_t keySize>
 class Block
 {
 public:
+	using TraitsType = Traits<keySize>;
+	using KeyType = Key<keySize>;
+	
 	explicit Block(const Key<keySize> &key)
 	{
 		this->_expandKey(key.key);
@@ -57,7 +70,7 @@ public:
 		k += 4;
 		
 		// Perform transformation on middle rounds
-		for (uint8_t round = 1; round < KeyTraits<keySize>::rounds; round++)
+		for (uint8_t round = 1; round < Traits<keySize>::rounds; round++)
 		{
 			t0 = t0_enc[uint8_t(s0 >> 24)] ^ t1_enc[uint8_t(s1 >> 16)] ^ t2_enc[uint8_t(s2 >> 8)] ^ t3_enc[uint8_t(s3)] ^ this->_expandedKey[k + 0];
 			t1 = t0_enc[uint8_t(s1 >> 24)] ^ t1_enc[uint8_t(s2 >> 16)] ^ t2_enc[uint8_t(s3 >> 8)] ^ t3_enc[uint8_t(s0)] ^ this->_expandedKey[k + 1];
@@ -94,18 +107,18 @@ public:
 		alignas(uint32_t) StateType state;
 		
 		// Copy plain text into state
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
+			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
 			{
 				state[column][row] = *cipherBlock;
 				cipherBlock++;
 			}
 		}
 		
-		this->_addRoundKey(state, KeyTraits<keySize>::rounds);
+		this->_addRoundKey(state, Traits<keySize>::rounds);
 		
-		for (uint8_t round = KeyTraits<keySize>::rounds - 1; round > 0; round--)
+		for (uint8_t round = Traits<keySize>::rounds - 1; round > 0; round--)
 		{
 			this->_inverseShiftRows(state);
 			this->_inverseSubBytes(state);
@@ -118,56 +131,56 @@ public:
 		this->_addRoundKey(state, 0);
 		
 		// Write state into cipher text
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
+			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
 			{
 				*plainBlock = state[column][row];
 				plainBlock++;
 			}
 		}
 		
-		safeSetZero(state, AES_BLOCK_SIZE * AES_BLOCK_SIZE * sizeof (uint8_t));
+		safeSetZero(state, TraitsType::blockSize * TraitsType::blockSize * sizeof (uint8_t));
 	}
 	
 private:
-	using StateType = uint8_t [AES_BLOCK_SIZE][AES_BLOCK_SIZE];
+	using StateType = uint8_t [TraitsType::blockSize][TraitsType::blockSize];
 	
-	uint32_t _expandedKey[AES_BLOCK_SIZE * (KeyTraits<keySize>::rounds + 1)];
+	uint32_t _expandedKey[TraitsType::blockSize * (Traits<keySize>::rounds + 1)];
 	
 	void _expandKey(const uint8_t *key)
 	{
 		uint32_t tmp = 0;
 		
-		for (uint8_t column = 0; column < KeyTraits<keySize>::size; column++)
+		for (uint8_t column = 0; column < Traits<keySize>::keySize; column++)
 		{
 			this->_expandedKey[column] = ((((((key[4 * column] << 8) | key[4 * column + 1]) << 8) | key[4 * column + 2]) << 8) | key[4 * column + 3]);
 		}
 		
-		for (uint8_t column = KeyTraits<keySize>::size; column < (AES_BLOCK_SIZE * (KeyTraits<keySize>::rounds + 1)); column++)
+		for (uint8_t column = Traits<keySize>::keySize; column < (TraitsType::blockSize * (Traits<keySize>::rounds + 1)); column++)
 		{
 			tmp = _expandedKey[column - 1];
 			
-			if ((column % KeyTraits<keySize>::size) == 0)
+			if ((column % Traits<keySize>::keySize) == 0)
 			{
-				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / KeyTraits<keySize>::size] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
+				tmp = this->_subWord(this->_rotWord(tmp)) ^ (rCon[column / Traits<keySize>::keySize] << (sizeof (uint32_t) - sizeof(uint8_t)) * 8);
 			}
-			else if ((KeyTraits<keySize>::size > 6) & ((column % KeyTraits<keySize>::size) == 4))
+			else if ((Traits<keySize>::keySize > 6) & ((column % Traits<keySize>::keySize) == 4))
 			{
 				tmp = this->_subWord(tmp);
 			}
 			
-			this->_expandedKey[column] = this->_expandedKey[column - KeyTraits<keySize>::size] ^ tmp;
+			this->_expandedKey[column] = this->_expandedKey[column - Traits<keySize>::keySize] ^ tmp;
 		}
 	}
 	
 	inline void _addRoundKey(StateType &state, const uint8_t round)
 	{
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
 			uint32_t roundKey = *reinterpret_cast<uint32_t *>(state[column]);
 			
-			roundKey ^= changeEndianness(this->_expandedKey[round * AES_BLOCK_SIZE + column]);
+			roundKey ^= changeEndianness(this->_expandedKey[round * TraitsType::blockSize + column]);
 			
 			// Write back word
 			*reinterpret_cast<uint32_t *>(state[column]) = roundKey;
@@ -185,7 +198,7 @@ private:
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
@@ -201,7 +214,7 @@ private:
 	{
 		alignas(uint32_t) uint8_t word[] = {0x00, 0x00, 0x00, 0x00};
 		
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
 			// No endian conversion needed because the loaded value is stored immediantely
 			*reinterpret_cast<uint32_t *>(&word[0]) = *reinterpret_cast<uint32_t *>(&state[column][0]);
@@ -272,9 +285,9 @@ private:
 	void _subBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
+			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
 			{
 				state[column][row] = sBox_enc[state[column][row]];
 			}
@@ -284,9 +297,9 @@ private:
 	void _inverseSubBytes(StateType &state)
 	{
 		// Set each element of the state to the value of the corresponding SBox LUT element
-		for (uint8_t column = 0; column < AES_BLOCK_SIZE; column++)
+		for (uint8_t column = 0; column < TraitsType::blockSize; column++)
 		{
-			for (uint8_t row = 0; row < AES_BLOCK_SIZE; row++)
+			for (uint8_t row = 0; row < TraitsType::blockSize; row++)
 			{
 				state[column][row] = sBox_dec[state[column][row]];
 			}
@@ -315,6 +328,6 @@ using Block128 = Block<AES_128_KEY_SIZE>;
 using Block192 = Block<AES_192_KEY_SIZE>;
 using Block256 = Block<AES_256_KEY_SIZE>;
 
-} // namespace Aes
+} // namespace Crypto::Aes
 
-#endif // BLOCK_H
+#endif // AESBLOCK_H

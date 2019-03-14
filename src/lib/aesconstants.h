@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef AESCONSTANTS_H
+#define AESCONSTANTS_H
 
 #include <stdint.h>
 
@@ -11,7 +11,7 @@
 #define AES_192_ROUND_COUNT		12
 #define AES_256_ROUND_COUNT		14
 
-namespace Aes
+namespace Crypto::Aes
 {
 
 const uint8_t sBox_enc[] = {
@@ -450,6 +450,6 @@ const uint32_t t3_dec[] = {
 	0xa8017139, 0x0cb3de08, 0xb4e49cd8, 0x56c19064, 0xcb84617b, 0x32b670d5, 0x6c5c7448, 0xb85742d0
 };
 
-} // namespace Aes
+} // namespace Crypto::Aes
 
-#endif // CONSTANTS_H
+#endif // AESCONSTANTS_H
