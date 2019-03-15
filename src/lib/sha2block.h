@@ -1,8 +1,10 @@
 #ifndef SHA2_H
 #define SHA2_H
 
+#include <stddef.h>
 #include <stdint.h>
 
+#include "cryptoglobals.h"
 #include "sha2constants.h"
 #include "sha2traits.h"
 
@@ -20,10 +22,84 @@ public:
 		this->_initializeState();
 	}
 	
+	void add(const uint8_t *block)
+	{
+		// Prepare message schedule
+		
+		// Working variables
+		WordType a, b, c, d, e, f, g, h;
+		
+		a = this->_state[0];
+		b = this->_state[1];
+		c = this->_state[2];
+		d = this->_state[3];
+		e = this->_state[4];
+		f = this->_state[5];
+		g = this->_state[6];
+		h = this->_state[7];
+		
+		for (uint32_t i = 0; i < 64; i++)
+		{
+			WordType T1, T2;
+			
+//			T1 = h + 
+		}
+		
+		// Compute intermediate hash value
+	}
+	
+	void finalize(const uint8_t *partialBlock, const size_t size)
+	{
+		
+	}
+	
+	void hash(const uint8_t *message, const size_t messageSize)
+	{
+		
+	}
+	
+	void reset()
+	{
+		this->_initializeState();
+	}
+	
 private:
-	typename TraitsType::WordType _state[TraitsType::stateSize];
+	using WordType = typename TraitsType::WordType;
+	WordType _state[TraitsType::stateSize];
 	
 	void _initializeState();
+	
+	void _paddBlock();
+	
+	constexpr WordType _ch(const WordType x, const WordType y, const WordType z)
+	{
+		return ((x ^ y) ^ (~x ^ z));
+	}
+	
+	constexpr WordType _maj(const WordType x, const WordType y, const WordType z)
+	{
+		return ((x ^ y) ^ (x ^ z) ^ (y ^ z));
+	}
+	
+	constexpr WordType _sigma0(const WordType x)
+	{
+		return (rotateRight(x, 2) ^ rotateRight(x, 13) ^ rotateRight(x, 22));
+	}
+	
+	constexpr WordType _sigma1(const WordType x)
+	{
+		return (rotateRight(x, 6) ^ rotateRight(x, 11) ^ rotateRight(x, 25));
+	}
+	
+	constexpr WordType _phi0(const WordType x)
+	{
+		return (rotateRight(x, 7) ^ rotateRight(x, 18) ^ shiftRight(x, 3));
+	}
+	
+	constexpr WordType _phi1(const WordType x)
+	{
+		return (rotateRight(x, 17) ^ rotateRight(x, 19) ^ shiftRight(x, 10));
+	}
 };
 
 template <>
