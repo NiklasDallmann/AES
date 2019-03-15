@@ -18,7 +18,7 @@ HEADERS					+= \
     cipherkey.h \
     ctrmode.h \
     sha2traits.h \
-    sha2.h \
-    sha2constants.h
+    sha2constants.h \
+    sha2block.h
 
 include($$PWD/../../base_configuration.pri)
