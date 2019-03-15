@@ -65,6 +65,19 @@ void Sha2Digest<SHA384_DIGEST_SIZE>::_initializeState()
 	this->_state[7] = 0x47b5481dbefa4fa4;
 }
 
+template <>
+void Sha2Digest<SHA512_DIGEST_SIZE>::_initializeState()
+{
+	this->_state[0] = 0x6a09e667f3bcc908;
+	this->_state[1] = 0xbb67ae8584caa73b;
+	this->_state[2] = 0x3c6ef372fe94f82b;
+	this->_state[3] = 0xa54ff53a5f1d36f1;
+	this->_state[4] = 0x510e527fade682d1;
+	this->_state[5] = 0x9b05688c2b3e6c1f;
+	this->_state[6] = 0x1f83d9abfb41bd6b;
+	this->_state[7] = 0x5be0cd19137e2179;
+}
+
 } // namespace Crypto::Hash
 
 #endif // SHA2_H
