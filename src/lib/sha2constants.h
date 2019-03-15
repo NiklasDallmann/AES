@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#define SHA224_DIGEST_SIZE 224
-#define SHA256_DIGEST_SIZE 256
-#define SHA384_DIGEST_SIZE 384
-#define SHA512_DIGEST_SIZE 512
+#define SHA224_DIGEST_SIZE 224 / 8
+#define SHA256_DIGEST_SIZE 256 / 8
+#define SHA384_DIGEST_SIZE 384 / 8
+#define SHA512_DIGEST_SIZE 512 / 8
 
 namespace Crypto::Hash::Sha2
 {
