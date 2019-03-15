@@ -19,6 +19,6 @@ HEADERS					+= \
     ctrmode.h \
     sha2traits.h \
     sha2constants.h \
-    sha2block.h
+    sha2digest.h
 
 include($$PWD/../../base_configuration.pri)

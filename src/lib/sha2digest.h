@@ -25,6 +25,17 @@ public:
 	void add(const uint8_t *block)
 	{
 		// Prepare message schedule
+		WordType w[TraitsType::blockSize];
+		
+		for (uint32_t t = 0; t < 16; t++)
+		{
+			w[t] = changeEndianness(reinterpret_cast<WordType *>(block)[t]);
+		}
+		
+		for (uint32_t t = 16; t < TraitsType::blockSize; t++)
+		{
+			w[t] = this->_phi1(w[t - 2]) + w[t - 7] + this->_phi0(w[t - 15]) + w[t - 16];
+		}
 		
 		// Working variables
 		WordType a, b, c, d, e, f, g, h;
@@ -38,14 +49,32 @@ public:
 		g = this->_state[6];
 		h = this->_state[7];
 		
-		for (uint32_t i = 0; i < 64; i++)
+		for (uint32_t t = 0; t < 64; t++)
 		{
 			WordType T1, T2;
 			
-//			T1 = h + 
+			T1 = h + this->_sigma1(e) + this->_ch(e, f, g) + Sha2::sha224_256Constants[t] + w[t];
+			T2 = this->_sigma0(a) + this->_maj(a, b, c);
+			
+			h = g;
+			g = f;
+			f = e;
+			e = d + T1;
+			d = c;
+			c = b;
+			b = a;
+			a = T1 + T2;
 		}
 		
 		// Compute intermediate hash value
+		this->_state[0] += a;
+		this->_state[1] += b;
+		this->_state[2] += c;
+		this->_state[3] += d;
+		this->_state[4] += e;
+		this->_state[5] += f;
+		this->_state[6] += g;
+		this->_state[7] += h;
 	}
 	
 	void finalize(const uint8_t *partialBlock, const size_t size)
@@ -152,6 +181,62 @@ void Sha2Digest<SHA512_DIGEST_SIZE>::_initializeState()
 	this->_state[5] = 0x9b05688c2b3e6c1f;
 	this->_state[6] = 0x1f83d9abfb41bd6b;
 	this->_state[7] = 0x5be0cd19137e2179;
+}
+
+template <>
+void Sha2Digest<SHA256_DIGEST_SIZE>::add(const uint8_t *block)
+{
+	// Prepare message schedule
+	WordType w[TraitsType::blockSize];
+	
+	for (uint32_t t = 0; t < 16; t++)
+	{
+		w[t] = changeEndianness(reinterpret_cast<const WordType *>(block)[t]);
+	}
+	
+	for (uint32_t t = 16; t < TraitsType::blockSize; t++)
+	{
+		w[t] = this->_phi1(w[t - 2]) + w[t - 7] + this->_phi0(w[t - 15]) + w[t - 16];
+	}
+	
+	// Working variables
+	WordType a, b, c, d, e, f, g, h;
+	
+	a = this->_state[0];
+	b = this->_state[1];
+	c = this->_state[2];
+	d = this->_state[3];
+	e = this->_state[4];
+	f = this->_state[5];
+	g = this->_state[6];
+	h = this->_state[7];
+	
+	for (uint32_t t = 0; t < 64; t++)
+	{
+		WordType T1, T2;
+		
+		T1 = h + this->_sigma1(e) + this->_ch(e, f, g) + Sha2::sha224_256Constants[t] + w[t];
+		T2 = this->_sigma0(a) + this->_maj(a, b, c);
+		
+		h = g;
+		g = f;
+		f = e;
+		e = d + T1;
+		d = c;
+		c = b;
+		b = a;
+		a = T1 + T2;
+	}
+	
+	// Compute intermediate hash value
+	this->_state[0] += a;
+	this->_state[1] += b;
+	this->_state[2] += c;
+	this->_state[3] += d;
+	this->_state[4] += e;
+	this->_state[5] += f;
+	this->_state[6] += g;
+	this->_state[7] += h;
 }
 
 } // namespace Crypto::Hash
