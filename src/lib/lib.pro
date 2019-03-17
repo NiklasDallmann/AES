@@ -6,7 +6,8 @@ TEMPLATE				= lib
 CONFIG					+= staticlib
 DESTDIR					= $$PWD/../../target/lib
 
-SOURCES					+=
+SOURCES					+= \
+    sha2digest.cpp
 
 HEADERS					+= \
     aesblock.h \

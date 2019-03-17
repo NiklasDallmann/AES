@@ -153,6 +153,22 @@ T rotateRight(T value, size_t bitCount)
 }
 
 template <typename T>
+T shiftLeft(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value << bitCount);
+}
+
+template <typename T>
+T shiftRight(T value, size_t bitCount)
+{
+	static_assert (std::is_integral<T>::value, "Type is no integral type");
+	
+	return (value >> bitCount);
+}
+
+template <typename T>
 inline T changeEndianness(const T value);
 
 template <>

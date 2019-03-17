@@ -1,4 +1,5 @@
 TEMPLATE				= subdirs
 
 SUBDIRS					= \
-    aestest
+    aestest \
+	sha2test
