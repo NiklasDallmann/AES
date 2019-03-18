@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "cryptoglobals.h"
-#include "sha2constants.h"
 #include "sha2traits.h"
 
 namespace Crypto::Hash::Sha2
@@ -139,6 +138,11 @@ private:
 	
 	void _initializeState();
 };
+
+using Digest224 = Digest<SHA224_DIGEST_SIZE>;
+using Digest256 = Digest<SHA256_DIGEST_SIZE>;
+using Digest384 = Digest<SHA384_DIGEST_SIZE>;
+using Digest512 = Digest<SHA512_DIGEST_SIZE>;
 
 } // namespace Crypto::Hash::Sha2
 

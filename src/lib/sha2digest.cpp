@@ -3,6 +3,8 @@
 #include <cassert>
 #include <string.h>
 
+#include "sha2constants.h"
+
 namespace Crypto::Hash::Sha2
 {
 
@@ -180,7 +182,7 @@ inline void _sha512Update(Sha2::Traits<SHA512_DIGEST_SIZE>::WordType *state, con
 	g = state[6];
 	h = state[7];
 	
-	for (uint32_t t = 0; t < 64; t++)
+	for (uint32_t t = 0; t < 80; t++)
 	{
 		WordType T1, T2;
 		
