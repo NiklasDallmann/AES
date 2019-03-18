@@ -55,11 +55,41 @@ public:
 	///
 	void finalize(const uint8_t *block, const size_t size)
 	{
-		uint8_t localBlock[TraitsType::blockSize];
+		uint8_t paddedBlock[TraitsType::blockSize * 2];
 		
-		this->_paddBlock(localBlock, block, size);
+		// Calculations
+//		const size_t paddingBytes = (TraitsType::blockSize - sizeof (WordType) * 2) - size;
+		const size_t paddedBlockSize = (size <= (TraitsType::blockSize - sizeof (WordType) - 1)) ? TraitsType::blockSize : (2 * TraitsType::blockSize);
+		const size_t fullWords = (size / TraitsType::blockSize / sizeof (WordType));
 		
-		this->update(localBlock);
+		// Word-sized pointers
+		WordType *paddedBlockWords = reinterpret_cast<WordType *>(paddedBlock);
+		const WordType *blockWords = reinterpret_cast<const WordType *>(block);
+		
+		// Set padded block zero and copy existing data from partial block
+		memset(paddedBlock, '0', sizeof (paddedBlock));
+		for (size_t byte = 0; byte < fullWords; byte++)
+		{
+			paddedBlock[byte] = block[byte];
+		}
+		
+		// Set first byte after block end
+		paddedBlock[size] = 0x80;
+		
+		// Add size to the end
+		this->_messageSize += size * 8;
+		(paddedBlockWords + (paddedBlockSize / sizeof (WordType)) - 1) = changeEndianness(this->_messageSize);
+		
+		// Update digest
+		if (paddedBlockSize == TraitsType::blockSize)
+		{
+			this->update(paddedBlock);
+		}
+		else
+		{
+			this->update(paddedBlock);
+			this->update(paddedBlock + TraitsType::blockSize);
+		}
 	}
 	
 	///
@@ -105,9 +135,9 @@ public:
 private:
 	using WordType = typename TraitsType::WordType;
 	WordType _state[TraitsType::stateSize];
+	size_t _messageSize = 0;
 	
 	void _initializeState();
-	static void _paddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size);
 };
 
 } // namespace Crypto::Hash::Sha2

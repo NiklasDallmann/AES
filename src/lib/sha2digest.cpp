@@ -1,5 +1,6 @@
 #include "sha2digest.h"
 
+#include <cassert>
 #include <string.h>
 
 namespace Crypto::Hash::Sha2
@@ -91,88 +92,6 @@ template <typename WordType>
 inline static constexpr WordType _phi1(const WordType x)
 {
 	return (rotateRight(x, 17) ^ rotateRight(x, 19) ^ shiftRight(x, 10));
-}
-
-inline void _sha256PaddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	using TraitsType = Sha2::Traits<SHA256_DIGEST_SIZE>;
-	using WordType = TraitsType::WordType;
-	
-	const size_t fullWords = (size / TraitsType::blockSize / sizeof (WordType));
-	const size_t remainingBytes = size % TraitsType::blockSize;
-	const size_t remainingWords = TraitsType::stateSize - fullWords - ((remainingBytes != 0) * 1);
-	
-	WordType *blockWords = reinterpret_cast<WordType *>(paddedBlock);
-	const WordType *partialBlockWords = reinterpret_cast<const WordType *>(block);
-	
-	// Copy full words
-	for (size_t word = 0; word < fullWords; word++)
-	{
-		blockWords[word] = changeEndianness(partialBlockWords[word]);
-	}
-	
-	// Padd remaining bytes to word
-	WordType word = 0;
-	
-	switch (remainingBytes)
-	{
-		case 0:
-			break;
-		case 1:
-			word = WordType(*(block + fullWords * sizeof (WordType))) << 24;
-			word |= 0x80000000;
-			blockWords[fullWords] = changeEndianness(word);
-			break;
-		case 2:
-			word = WordType(*(block + fullWords * sizeof (WordType))) << 24;
-			word |= WordType(*(block + (fullWords + 1) * sizeof (WordType))) << 16;
-			word |= 0x00800000;
-			blockWords[fullWords] = changeEndianness(word);
-			break;
-		case 3:
-			word = WordType(*(block + fullWords * sizeof (WordType))) << 24;
-			word |= WordType(*(block + (fullWords + 1) * sizeof (WordType))) << 16;
-			word |= WordType(*(block + (fullWords + 1) * sizeof (WordType))) << 8;
-			word |= 0x00008000;
-			blockWords[fullWords] = changeEndianness(word);
-			break;
-	}
-	
-	// Padd remaining words
-	// Multiply instead of branching
-	for (size_t word = 0; word < remainingWords; word++)
-	{
-		blockWords[word + fullWords] = 0;
-	}
-}
-
-inline void _sha512PaddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	
-}
-
-template<>
-void Digest<SHA224_DIGEST_SIZE>::_paddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	_sha256PaddBlock(paddedBlock, paddedSize, block, size);
-}
-
-template<>
-void Digest<SHA256_DIGEST_SIZE>::_paddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	_sha256PaddBlock(paddedBlock, paddedSize, block, size);
-}
-
-template<>
-void Digest<SHA384_DIGEST_SIZE>::_paddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	_sha512PaddBlock(paddedBlock, paddedSize, block, size);
-}
-
-template<>
-void Digest<SHA512_DIGEST_SIZE>::_paddBlock(uint8_t *paddedBlock, size_t *paddedSize, const uint8_t *block, const size_t size)
-{
-	_sha512PaddBlock(paddedBlock, paddedSize, block, size);
 }
 
 inline void _sha256Update(Sha2::Traits<SHA256_DIGEST_SIZE>::WordType *state, const uint8_t *block)
@@ -292,24 +211,28 @@ inline void _sha512Update(Sha2::Traits<SHA512_DIGEST_SIZE>::WordType *state, con
 template <>
 void Digest<SHA224_DIGEST_SIZE>::update(const uint8_t *block)
 {
+	this->_messageSize += TraitsType::blockSize * 8;
 	_sha256Update(this->_state, block);
 }
 
 template <>
 void Digest<SHA256_DIGEST_SIZE>::update(const uint8_t *block)
 {
+	this->_messageSize += TraitsType::blockSize * 8;
 	_sha256Update(this->_state, block);
 }
 
 template <>
 void Digest<SHA384_DIGEST_SIZE>::update(const uint8_t *block)
 {
+	this->_messageSize += TraitsType::blockSize * 8;
 	_sha512Update(this->_state, block);
 }
 
 template <>
 void Digest<SHA512_DIGEST_SIZE>::update(const uint8_t *block)
 {
+	this->_messageSize += TraitsType::blockSize * 8;
 	_sha512Update(this->_state, block);
 }
 
