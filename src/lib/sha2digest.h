@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "cryptoglobals.h"
+#include "cryptoutilities.h"
 #include "sha2traits.h"
 
 namespace Crypto::Hash::Sha2
@@ -58,16 +59,15 @@ public:
 		
 		// Calculations
 //		const size_t paddingBytes = (TraitsType::blockSize - sizeof (WordType) * 2) - size;
-		const size_t paddedBlockSize = (size <= (TraitsType::blockSize - sizeof (WordType) - 1)) ? TraitsType::blockSize : (2 * TraitsType::blockSize);
-		const size_t fullWords = (size / TraitsType::blockSize / sizeof (WordType));
+		const size_t paddedBlockSize = (size <= (TraitsType::blockSize - sizeof (WordType) - 1)) ? TraitsType::blockSize : (TraitsType::blockSize * 2);
 		
 		// Word-sized pointers
 		WordType *paddedBlockWords = reinterpret_cast<WordType *>(paddedBlock);
 		const WordType *blockWords = reinterpret_cast<const WordType *>(block);
 		
 		// Set padded block zero and copy existing data from partial block
-		memset(paddedBlock, '0', sizeof (paddedBlock));
-		for (size_t byte = 0; byte < fullWords; byte++)
+		memset(paddedBlock, '\0', sizeof (paddedBlock));
+		for (size_t byte = 0; byte < size; byte++)
 		{
 			paddedBlock[byte] = block[byte];
 		}
@@ -77,7 +77,10 @@ public:
 		
 		// Add size to the end
 		this->_messageSize += size * 8;
-		(paddedBlockWords + (paddedBlockSize / sizeof (WordType)) - 1) = changeEndianness(this->_messageSize);
+		*(reinterpret_cast<size_t *>(paddedBlock + (paddedBlockSize / sizeof (WordType))) - 1) = this->_messageSize;
+		
+		DEBUG("size added 0x" << std::hex << this->_messageSize)
+		printBuffer(paddedBlock, paddedBlockSize);
 		
 		// Update digest
 		if (paddedBlockSize == TraitsType::blockSize)
@@ -92,7 +95,7 @@ public:
 	}
 	
 	///
-	/// \brief	Hashes \a message with a size of an arbitraty \a messageSize.
+	/// \brief	Hashes \a message with an arbitraty \a messageSize.
 	/// 
 	/// \since	1.0
 	///
@@ -100,6 +103,9 @@ public:
 	{
 		const size_t blocks = messageSize / TraitsType::blockSize;
 		const size_t remainingBytes = messageSize % TraitsType::blockSize;
+		
+		DEBUG("blocks=" << blocks)
+		DEBUG("remainingBytes=" << remainingBytes)
 		
 		for (size_t block = 0; block < blocks; block++)
 		{
@@ -128,7 +134,13 @@ public:
 	///
 	void extract(uint8_t *digest)
 	{
-		memcpy(digest, reinterpret_cast<uint8_t *>(this->_state), TraitsType::digestSize);
+//		memcpy(digest, reinterpret_cast<uint8_t *>(this->_state), TraitsType::digestSize);
+		WordType *digestWords = reinterpret_cast<WordType *>(digest);
+		
+		for (size_t word = 0; word < TraitsType::stateSize; word++)
+		{
+			*(reinterpret_cast<WordType *>(digest) + word) = changeEndianness(this->_state[word]);
+		}
 	}
 	
 private:

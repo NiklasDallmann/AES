@@ -1,6 +1,6 @@
 QT						-= core gui
 
-TARGET					= aes
+TARGET					= crypto
 
 TEMPLATE				= lib
 CONFIG					+= staticlib
@@ -20,6 +20,8 @@ HEADERS					+= \
     ctrmode.h \
     sha2traits.h \
     sha2constants.h \
-    sha2digest.h
+    sha2digest.h \
+    cbcmode.h \
+    paddingtype.h
 
 include($$PWD/../../base_configuration.pri)

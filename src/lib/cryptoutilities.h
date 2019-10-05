@@ -14,7 +14,7 @@
 
 #include "cryptoglobals.h"
 
-static inline void printBuffer(const uint8_t *buffer, size_t size)
+[[maybe_unused]] static inline void printBuffer(const uint8_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
@@ -24,7 +24,7 @@ static inline void printBuffer(const uint8_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-static inline void printBuffer(const uint32_t *buffer, size_t size)
+[[maybe_unused]] static inline void printBuffer(const uint32_t *buffer, size_t size)
 {
 	for (uint8_t i = 0; i < size; i++)
 	{
@@ -34,7 +34,7 @@ static inline void printBuffer(const uint32_t *buffer, size_t size)
 	std::cout << std::endl;
 }
 
-static inline void printState(const uint8_t *state)
+[[maybe_unused]] static inline void printState(const uint8_t *state)
 {
 	uint8_t stateData[4][4];
 	
@@ -56,7 +56,7 @@ static inline void printState(const uint8_t *state)
 	std::cout << std::endl;
 }
 
-void generateTTable()
+[[maybe_unused]] static void generateTTable()
 {
 	std::stringstream table;
 	

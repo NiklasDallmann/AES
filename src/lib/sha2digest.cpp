@@ -24,6 +24,7 @@ void Digest<SHA224_DIGEST_SIZE>::_initializeState()
 template <>
 void Digest<SHA256_DIGEST_SIZE>::_initializeState()
 {
+	DEBUG("Initialize SHA256")
 	this->_state[0] = 0x6a09e667;
 	this->_state[1] = 0xbb67ae85;
 	this->_state[2] = 0x3c6ef372;
@@ -99,7 +100,8 @@ inline static constexpr WordType _phi1(const WordType x)
 inline void _sha256Update(Sha2::Traits<SHA256_DIGEST_SIZE>::WordType *state, const uint8_t *block)
 {
 	using WordType = Sha2::Traits<SHA256_DIGEST_SIZE>::WordType;
-	
+//	DEBUG("STATE")
+//	printBuffer(state, 8);
 	// Prepare message schedule
 	WordType w[64];
 	
@@ -112,6 +114,9 @@ inline void _sha256Update(Sha2::Traits<SHA256_DIGEST_SIZE>::WordType *state, con
 	{
 		w[t] = _phi1(w[t - 2]) + w[t - 7] + _phi0(w[t - 15]) + w[t - 16];
 	}
+	
+//	DEBUG("W")
+//	printBuffer(w, 64);
 	
 	// Working variables
 	WordType a, b, c, d, e, f, g, h;
@@ -151,6 +156,9 @@ inline void _sha256Update(Sha2::Traits<SHA256_DIGEST_SIZE>::WordType *state, con
 	state[5] += f;
 	state[6] += g;
 	state[7] += h;
+	
+	DEBUG("STATE")
+	printBuffer(state, 8);
 }
 
 inline void _sha512Update(Sha2::Traits<SHA512_DIGEST_SIZE>::WordType *state, const uint8_t *block)

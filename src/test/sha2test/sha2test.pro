@@ -5,6 +5,10 @@ CONFIG -= qt
 
 INCLUDEPATH += $$PWD/../../lib
 
+LIBS += -L$$PWD/../../../target/lib/ -lcrypto
+DEPENDPATH += $$PWD/../../../target
+PRE_TARGETDEPS += $$PWD/../../../target/lib/libcrypto.a
+
 SOURCES += \
         main.cpp
 
