@@ -138,7 +138,7 @@ int main()
 		
 		if (memcmp(plaintext, decryptedPlaintext, sizeof (plaintext)) == 0)
 		{
-			SUCCESS("AES-128 Decryption")
+			SUCCESS("AES-128-CTR Decryption")
 		}
 		else
 		{
@@ -186,7 +186,7 @@ int main()
 			FAIL("AES-128-CTR")
 		}
 		
-		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::BlockCipher::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 500000, sizeof (plaintext));
+		benchmark([&keyObj, &initializationVector, &plaintext, &ciphertext](){Crypto::Mode::Ctr<Crypto::BlockCipher::Aes::Block128>::encrypt(keyObj, initializationVector, plaintext, sizeof (plaintext), ciphertext);}, "AES-128-CTR	", 100000, sizeof (plaintext));
 	};
 	
 	auto aes192Test = []()
