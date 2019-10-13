@@ -98,7 +98,7 @@
 #define CRYPTO_SSE2_SUPPORT
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__GNUC__)
 ///
 /// \brief	Defined if compiler is GCC.
 /// 
@@ -127,11 +127,11 @@
 #define CRYPTO_LITTLE_ENDIAN
 #endif
 
-static inline void safeSetZero(void *source, size_t size)
+inline void safeSetZero(void *source, size_t size)
 {
 #ifdef CRYPTO_COMPILER_GCC
 		explicit_bzero(source, size);
-#elif
+#else
 		static_assert (false, "Compiler not supported.");
 #endif
 }

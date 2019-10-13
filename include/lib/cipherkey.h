@@ -38,6 +38,20 @@ public:
 		return *this;
 	}
 	
+	bool operator==(const Key &other) const
+	{
+		bool returnValue = true;
+		
+		int result = memcmp(this->key, other.key, keySize * sizeof (uint8_t));
+		
+		if (result == 0)
+		{
+			returnValue = false;
+		}
+		
+		return returnValue;
+	}
+	
 	uint8_t key[keySize];
 };
 

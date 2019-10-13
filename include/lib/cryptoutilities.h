@@ -60,8 +60,6 @@
 {
 	std::stringstream table;
 	
-	INFO("BEGIN T TABLE")
-	
 	for (uint32_t a = 0; a <= 0xff; a++)
 	{
 		uint32_t word = 0;
@@ -90,8 +88,6 @@
 	}
 	
 	std::cout << table.str() << std::endl;
-	
-	INFO("END T TABLE")
 }
 
 #endif // CIPHERUTILITIES_H

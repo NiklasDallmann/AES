@@ -63,6 +63,7 @@ int main()
 			printBuffer(hash, sizeof (expectedHash));
 			INFO("EXPECTED")
 			printBuffer(expectedHash, sizeof (expectedHash));
+			abort();
 		}
 	};
 	
@@ -94,6 +95,7 @@ int main()
 			printBuffer(hash, sizeof (expectedHash));
 			INFO("EXPECTED")
 			printBuffer(expectedHash, sizeof (expectedHash));
+			abort();
 		}
 	};
 	
@@ -126,6 +128,7 @@ int main()
 			printBuffer(hash, sizeof (expectedHash));
 			INFO("EXPECTED")
 			printBuffer(expectedHash, sizeof (expectedHash));
+			abort();
 		}
 	};
 	

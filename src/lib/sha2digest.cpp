@@ -1,8 +1,7 @@
-#include "sha2digest.h"
-
 #include <cassert>
 #include <string.h>
 
+#include "sha2digest.h"
 #include "sha2constants.h"
 
 namespace Crypto::Hash::Sha2
@@ -24,7 +23,6 @@ void Digest<SHA224_DIGEST_SIZE>::_initializeState()
 template <>
 void Digest<SHA256_DIGEST_SIZE>::_initializeState()
 {
-	DEBUG("Initialize SHA256")
 	this->_state[0] = 0x6a09e667;
 	this->_state[1] = 0xbb67ae85;
 	this->_state[2] = 0x3c6ef372;
@@ -157,7 +155,6 @@ inline void _sha256Update(Sha2::Traits<SHA256_DIGEST_SIZE>::WordType *state, con
 	state[6] += g;
 	state[7] += h;
 	
-	DEBUG("STATE")
 	printBuffer(state, 8);
 }
 
